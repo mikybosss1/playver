@@ -38,6 +38,13 @@ const IconWallet = () => (
   </svg>
 );
 
+const IconProfile = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
 const IconSettings = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
@@ -66,6 +73,7 @@ export default function DashboardSidebar({
 
   const navItems = [
     { href: "/dashboard" as const, label: t("navOverview"), icon: <IconOverview /> },
+    { href: "/dashboard/profile" as const, label: t("navProfile"), icon: <IconProfile /> },
     { href: "/dashboard/teams" as const, label: t("navTeams"), icon: <IconTeams /> },
     { href: "/dashboard/events" as const, label: t("navEvents"), icon: <IconEvents /> },
     { href: "/dashboard/wallet" as const, label: t("navWallet"), icon: <IconWallet /> },

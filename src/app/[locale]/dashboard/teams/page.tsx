@@ -2,11 +2,14 @@ import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import CreateTeamButton from "@/components/CreateTeamButton";
 import { getMyTeams, getJoinedTeams } from "@/app/actions/team";
+import { Link } from "@/i18n/routing";
 
-function TeamCard({ team, badge }: { team: Record<string, string>; badge?: string }) {
+type TeamCardData = Awaited<ReturnType<typeof getMyTeams>>[number];
+
+function TeamCard({ team, badge }: { team: TeamCardData; badge?: string }) {
   return (
     <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm flex flex-col gap-3 hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-3">
+      <Link href={`/teams/${team.id}`} className="flex items-center gap-3">
         {team.logoUrl ? (
           <Image
             src={team.logoUrl}
@@ -31,7 +34,7 @@ function TeamCard({ team, badge }: { team: Record<string, string>; badge?: strin
           </div>
           <p className="text-xs text-zinc-400 font-medium">{team.sport}</p>
         </div>
-      </div>
+      </Link>
 
       <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -43,6 +46,7 @@ function TeamCard({ team, badge }: { team: Record<string, string>; badge?: strin
       {team.bio && (
         <p className="text-xs text-zinc-500 line-clamp-2">{team.bio}</p>
       )}
+      <p className="text-xs text-zinc-400">{team.memberCount} member{team.memberCount === 1 ? "" : "s"}</p>
     </div>
   );
 }

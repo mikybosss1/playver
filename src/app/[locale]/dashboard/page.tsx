@@ -2,16 +2,40 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
+import { getJoinedEvents, getMyEvents } from "@/app/actions/event";
+import { getJoinedTeams, getMyTeams } from "@/app/actions/team";
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const t = await getTranslations("Dashboard");
   const user = session!.user;
+  const [myEvents, joinedEvents, myTeams, joinedTeams] = await Promise.all([
+    getMyEvents(),
+    getJoinedEvents(),
+    getMyTeams(),
+    getJoinedTeams(),
+  ]);
+  const uniqueTeamIds = new Set([...myTeams, ...joinedTeams].map((team) => team.id));
+  const allEvents = [...myEvents, ...joinedEvents];
+  const now = new Date();
+  const upcomingEvents = allEvents
+    .filter((event) => new Date(event.startDateTime) >= now)
+    .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+  const gamesPlayed = allEvents.filter((event) => new Date(event.endDateTime) < now).length;
 
   const stats = [
-    { label: t("statUpcoming"), value: "0", icon: "📅" },
-    { label: t("statTeams"), value: "0", icon: "👥" },
-    { label: t("statPlayed"), value: "0", icon: "🏅" },
+    { label: t("statUpcoming"), value: String(upcomingEvents.length), icon: "📅" },
+    { label: t("statTeams"), value: String(uniqueTeamIds.size), icon: "👥" },
+    { label: t("statPlayed"), value: String(gamesPlayed), icon: "🏅" },
   ];
 
   return (
@@ -54,16 +78,27 @@ export default async function DashboardPage() {
               {t("browseEvents")}
             </Link>
           </div>
-          <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
-            <span className="text-4xl">🔍</span>
-            <p className="text-sm text-zinc-500">{t("noUpcoming")}</p>
-            <Link
-              href="/dashboard/events"
-              className="mt-2 px-5 py-2 text-xs font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
-            >
-              {t("findEvent")}
-            </Link>
-          </div>
+          {upcomingEvents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+              <span className="text-4xl">🔍</span>
+              <p className="text-sm text-zinc-500">{t("noUpcoming")}</p>
+              <Link
+                href="/dashboard/events"
+                className="mt-2 px-5 py-2 text-xs font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
+              >
+                {t("findEvent")}
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {upcomingEvents.slice(0, 4).map((event) => (
+                <div key={event.id} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                  <p className="text-sm font-bold text-zinc-900">{event.title}</p>
+                  <p className="text-xs text-zinc-500">{event.sport} · {formatDate(event.startDateTime)}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* My Teams */}
@@ -74,16 +109,27 @@ export default async function DashboardPage() {
               {t("browseTeams")}
             </Link>
           </div>
-          <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
-            <span className="text-4xl">👥</span>
-            <p className="text-sm text-zinc-500">{t("noTeams")}</p>
-            <Link
-              href="/dashboard/teams"
-              className="mt-2 px-5 py-2 text-xs font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
-            >
-              {t("joinTeam")}
-            </Link>
-          </div>
+          {uniqueTeamIds.size === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+              <span className="text-4xl">👥</span>
+              <p className="text-sm text-zinc-500">{t("noTeams")}</p>
+              <Link
+                href="/dashboard/teams"
+                className="mt-2 px-5 py-2 text-xs font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
+              >
+                {t("joinTeam")}
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {[...myTeams, ...joinedTeams].slice(0, 4).map((team) => (
+                <div key={team.id} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                  <p className="text-sm font-bold text-zinc-900">{team.name}</p>
+                  <p className="text-xs text-zinc-500">{team.sport} · {team.location}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

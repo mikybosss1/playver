@@ -1,28 +1,15 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
+import EventCard from "@/components/EventCard";
+import type { EventItem } from "@/app/actions/event";
 
-const placeholderAvatarColors = ["bg-red-300", "bg-blue-300", "bg-green-300"];
-
-function EventCardSkeleton() {
-  return (
-    <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="h-48 w-full bg-zinc-200 animate-pulse" />
-      <div className="p-6 flex flex-col gap-3">
-        <div className="h-5 bg-zinc-200 rounded animate-pulse w-3/4" />
-        <div className="h-4 bg-zinc-100 rounded animate-pulse w-1/2" />
-        <div className="h-4 bg-zinc-100 rounded animate-pulse w-2/3" />
-        <div className="flex items-center mt-2 -space-x-2">
-          {placeholderAvatarColors.map((color, i) => (
-            <div key={i} className={`size-7 rounded-full border-2 border-white ${color} animate-pulse`} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default async function UpcomingEvents() {
+export default async function UpcomingEvents({ events }: { events: EventItem[] }) {
   const t = await getTranslations("UpcomingEvents");
+  const now = new Date();
+  const upcomingEvents = events
+    .filter((event) => new Date(event.startDateTime) >= now)
+    .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
+    .slice(0, 3);
 
   return (
     <section className="py-20 bg-white">
@@ -34,11 +21,27 @@ export default async function UpcomingEvents() {
           <p className="text-zinc-500 text-base max-w-xl mx-auto">{t("subtitle")}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <EventCardSkeleton />
-          <EventCardSkeleton />
-          <EventCardSkeleton />
-        </div>
+        {upcomingEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 py-16 text-center">
+            <p className="text-sm text-zinc-500">{t("empty")}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {upcomingEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                freeLabel={t("free")}
+                endedLabel={t("eventEnded")}
+                joinedLabel={event.capacity
+                  ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
+                  : t("joinedCount", { count: event.participantCount })}
+                organizerLabel={t("organizedBy")}
+                href={`/discover/${event.id}`}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="flex justify-center mt-12">
           <Link

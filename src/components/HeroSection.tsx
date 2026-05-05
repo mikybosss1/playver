@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 
-export default function HeroSection() {
+export default function HeroSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   const t = useTranslations("Home");
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -38,13 +38,24 @@ export default function HeroSection() {
           {t("subtitle")}
         </p>
 
-        <Link
-          href="/discover"
-          className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold text-white rounded-lg shadow-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
-        >
-          {t("cta")}
-          <span aria-hidden>→</span>
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href="/discover"
+            className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold text-white rounded-lg shadow-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
+          >
+            {t("cta")}
+            <span aria-hidden>→</span>
+          </Link>
+          {isLoggedIn && (
+            <Link
+              href="/dashboard/events"
+              className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold text-white rounded-lg shadow-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
+            >
+              {t("createEvent")}
+              <span aria-hidden>→</span>
+            </Link>
+          )}
+        </div>
       </div>
     </section>
   );

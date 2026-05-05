@@ -17,6 +17,17 @@ export const ourFileRouter = {
   })
     .middleware(() => ({}))
     .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
+
+  profileAvatar: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    .middleware(() => ({}))
+    .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
+
+  profileMedia: f({
+    image: { maxFileSize: "16MB", maxFileCount: 10 },
+    video: { maxFileSize: "64MB", maxFileCount: 10 },
+  })
+    .middleware(() => ({}))
+    .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

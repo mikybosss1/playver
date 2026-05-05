@@ -1,23 +1,76 @@
 import { getTranslations } from "next-intl/server";
-import CreateEventForm from "@/components/CreateEventForm";
+import CreateEventButton from "@/components/CreateEventButton";
+import EventCard from "@/components/EventCard";
+import { getJoinedEvents, getMyEvents } from "@/app/actions/event";
 
 export default async function DashboardEventsPage() {
   const t = await getTranslations("DashboardEvents");
+  const [myEvents, joinedEvents] = await Promise.all([getMyEvents(), getJoinedEvents()]);
+  const joinedLabel = (event: (typeof myEvents)[number]) => event.capacity
+    ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
+    : t("joinedCount", { count: event.participantCount });
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10">
-      <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-1">
-        {t("eyebrow")}
-      </p>
-      <h1
-        className="text-3xl font-bold text-zinc-900 mb-2"
-        style={{ fontFamily: "var(--font-playfair)" }}
-      >
-        {t("title")}
-      </h1>
-      <p className="text-zinc-500 text-sm mb-10">{t("subtitle")}</p>
+    <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-1">
+            {t("eyebrow")}
+          </p>
+          <h1 className="text-3xl font-bold text-zinc-900" style={{ fontFamily: "var(--font-playfair)" }}>
+            {t("title")}
+          </h1>
+        </div>
+        <CreateEventButton label={t("createButton")} />
+      </div>
 
-      <CreateEventForm />
+      <section className="mb-10">
+        <h2 className="text-base font-bold text-zinc-700 mb-4">{t("myEventsTitle")}</h2>
+        {myEvents.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-10 flex flex-col items-center justify-center text-center gap-3">
+            <span className="text-4xl">📅</span>
+            <p className="text-zinc-500 text-sm">{t("emptyMyEvents")}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {myEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                freeLabel={t("free")}
+                endedLabel={t("eventEnded")}
+                joinedLabel={joinedLabel(event)}
+                organizerLabel={t("organizedBy")}
+                href={`/discover/${event.id}`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-base font-bold text-zinc-700 mb-4">{t("joinedEventsTitle")}</h2>
+        {joinedEvents.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-10 flex flex-col items-center justify-center text-center gap-3">
+            <span className="text-4xl">🏃</span>
+            <p className="text-zinc-500 text-sm">{t("emptyJoinedEvents")}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {joinedEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                freeLabel={t("free")}
+                endedLabel={t("eventEnded")}
+                joinedLabel={joinedLabel(event)}
+                organizerLabel={t("organizedBy")}
+                href={`/discover/${event.id}`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

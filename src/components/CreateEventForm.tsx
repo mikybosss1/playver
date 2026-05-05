@@ -30,7 +30,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-export default function CreateEventForm() {
+export default function CreateEventForm({
+  onSuccess,
+  onCancel,
+}: {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}) {
   const t = useTranslations("CreateEvent");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -49,7 +55,6 @@ export default function CreateEventForm() {
   const [description, setDescription] = useState("");
   const [rules, setRules] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   // Cover image
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -129,8 +134,11 @@ export default function CreateEventForm() {
           description: description || undefined,
           rules: rules || undefined,
         });
-        setSuccess(true);
-        router.push("/discover");
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push({ pathname: "/discover", query: { created: "event" } });
+        }
       } catch {
         setError(t("createError"));
       }
@@ -321,7 +329,7 @@ export default function CreateEventForm() {
 
       <div className="flex gap-3">
         <button
-          type="button" onClick={() => router.back()}
+          type="button" onClick={onCancel ?? (() => router.back())}
           className="px-6 py-3 text-sm font-semibold text-zinc-700 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
         >
           {t("cancel")}
