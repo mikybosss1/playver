@@ -9,15 +9,18 @@ import { sendTeamJoinedEmail } from "@/lib/emails";
 let teamMembersTablePromise: Promise<void> | null = null;
 
 async function ensureTeamMembersTable() {
-  teamMembersTablePromise ??= pool.query(
-    `CREATE TABLE IF NOT EXISTS "team_member" (
-      "id"        text PRIMARY KEY,
-      "teamId"    text NOT NULL REFERENCES "team"("id") ON DELETE CASCADE,
-      "userId"    text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-      "joinedAt"  timestamp NOT NULL DEFAULT NOW(),
-      UNIQUE("teamId", "userId")
-    )`
-  ).then(() => undefined);
+  teamMembersTablePromise ??= Promise.all([
+    pool.query(
+      `CREATE TABLE IF NOT EXISTS "team_member" (
+        "id"        text PRIMARY KEY,
+        "teamId"    text NOT NULL REFERENCES "team"("id") ON DELETE CASCADE,
+        "userId"    text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+        "joinedAt"  timestamp NOT NULL DEFAULT NOW(),
+        UNIQUE("teamId", "userId")
+      )`
+    ),
+    pool.query(`ALTER TABLE "team" ADD COLUMN IF NOT EXISTS "coverImageUrl" text`),
+  ]).then(() => undefined);
   await teamMembersTablePromise;
 }
 
@@ -29,6 +32,7 @@ type TeamRow = {
   bio: string | null;
   captainPhone: string | null;
   logoUrl: string | null;
+  coverImageUrl: string | null;
   captainId: string;
   captainName: string;
   createdAt: Date | string;
@@ -61,15 +65,16 @@ export async function createTeam(data: {
   bio?: string;
   captainPhone?: string;
   logoUrl?: string;
+  coverImageUrl?: string;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
 
   const id = crypto.randomUUID();
   await pool.query(
-    `INSERT INTO "team" (id, name, sport, location, bio, "captainPhone", "logoUrl", "captainId", "createdAt", "updatedAt")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())`,
-    [id, data.name, data.sport, data.location, data.bio ?? null, data.captainPhone ?? null, data.logoUrl ?? null, session.user.id]
+    `INSERT INTO "team" (id, name, sport, location, bio, "captainPhone", "logoUrl", "coverImageUrl", "captainId", "createdAt", "updatedAt")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW())`,
+    [id, data.name, data.sport, data.location, data.bio ?? null, data.captainPhone ?? null, data.logoUrl ?? null, data.coverImageUrl ?? null, session.user.id]
   );
 
   await ensureTeamMembersTable();

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TeamsGrid from "@/components/TeamsGrid";
+import CreateTeamButton from "@/components/CreateTeamButton";
 import { getTeams, getMembershipMap } from "@/app/actions/team";
 import { auth } from "@/lib/auth";
 
@@ -22,16 +23,25 @@ export default async function TeamsPage() {
       <Navbar />
       <main className="flex-1 bg-white">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-20">
-          <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-4">
-            {t("eyebrow")}
-          </p>
-          <h1
-            className="text-4xl sm:text-5xl font-bold text-zinc-900 mb-4"
-            style={{ fontFamily: "var(--font-playfair)" }}
-          >
-            {t("title")}
-          </h1>
-          <p className="text-zinc-500 text-lg max-w-xl">{t("subtitle")}</p>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-4">
+                {t("eyebrow")}
+              </p>
+              <h1
+                className="text-4xl sm:text-5xl font-bold text-zinc-900 mb-4"
+                style={{ fontFamily: "var(--font-playfair)" }}
+              >
+                {t("title")}
+              </h1>
+              <p className="text-zinc-500 text-lg max-w-xl">{t("subtitle")}</p>
+            </div>
+            {session && (
+              <div className="shrink-0 pt-1">
+                <CreateTeamButton label={t("createTeam")} />
+              </div>
+            )}
+          </div>
 
           <TeamsGrid
             teams={teams}
