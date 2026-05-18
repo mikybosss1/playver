@@ -122,6 +122,7 @@ export default async function EventDetailsPage({
                       leaveLabel={t("leave")}
                       price={event.price}
                       formFields={formFields}
+                      isEnded={isEnded}
                     />
                   )}
                   {isSuperAdmin && (

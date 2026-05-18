@@ -12,12 +12,13 @@ export async function POST(request: Request) {
   if (!eventId) return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
 
   const result = await pool.query(
-    `SELECT id, title, price FROM "event" WHERE id = $1`,
+    `SELECT id, title, price, "endDateTime" FROM "event" WHERE id = $1`,
     [eventId]
   );
   const event = result.rows[0];
   if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
   if (!event.price) return NextResponse.json({ error: "Event is free" }, { status: 400 });
+  if (new Date(event.endDateTime) < new Date()) return NextResponse.json({ error: "Event has ended" }, { status: 400 });
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001";
 

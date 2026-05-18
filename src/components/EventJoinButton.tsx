@@ -15,6 +15,7 @@ export default function EventJoinButton({
   leaveLabel,
   price = 0,
   formFields = [],
+  isEnded = false,
 }: {
   eventId: string;
   isJoined: boolean;
@@ -22,6 +23,7 @@ export default function EventJoinButton({
   leaveLabel: string;
   price?: number;
   formFields?: FormField[];
+  isEnded?: boolean;
 }) {
   const t = useTranslations("EventDetails");
   const [joined, setJoined] = useState(isJoined);
@@ -146,7 +148,7 @@ export default function EventJoinButton({
         >
           {isPending ? "..." : leaveLabel}
         </button>
-      ) : (
+      ) : isEnded ? null : (
         <button
           type="button"
           onClick={handleJoinClick}
