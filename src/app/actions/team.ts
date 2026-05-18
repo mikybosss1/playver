@@ -167,60 +167,72 @@ export async function getTeamMembers(teamId: string): Promise<TeamMember[]> {
   }));
 }
 
-export async function joinTeam(teamId: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-  await ensureTeamMembersTable();
+export async function joinTeam(teamId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureTeamMembersTable();
 
-  const existing = await pool.query(
-    `SELECT id FROM "team_member" WHERE "teamId" = $1 AND "userId" = $2`,
-    [teamId, session.user.id]
-  );
-  if (existing.rows.length > 0) throw new Error("Already a member");
+    const existing = await pool.query(
+      `SELECT id FROM "team_member" WHERE "teamId" = $1 AND "userId" = $2`,
+      [teamId, session.user.id]
+    );
+    if (existing.rows.length > 0) return { error: "Already a member" };
 
-  const [teamRow, userRow] = await Promise.all([
-    pool.query(`SELECT id, name, sport, location, "captainId" FROM "team" WHERE id = $1`, [teamId]),
-    pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [session.user.id]),
-  ]);
-  if (!teamRow.rows.length) throw new Error("Team not found");
+    const [teamRow, userRow] = await Promise.all([
+      pool.query(`SELECT id, name, sport, location, "captainId" FROM "team" WHERE id = $1`, [teamId]),
+      pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [session.user.id]),
+    ]);
+    if (!teamRow.rows.length) return { error: "Team not found" };
 
-  await pool.query(
-    `INSERT INTO "team_member" (id, "teamId", "userId") VALUES ($1, $2, $3)`,
-    [crypto.randomUUID(), teamId, session.user.id]
-  );
+    await pool.query(
+      `INSERT INTO "team_member" (id, "teamId", "userId") VALUES ($1, $2, $3)`,
+      [crypto.randomUUID(), teamId, session.user.id]
+    );
 
-  const team = teamRow.rows[0];
-  const u = userRow.rows[0];
-  if (u?.email) {
-    const captainRow = await pool.query(`SELECT name FROM "user" WHERE id = $1`, [team.captainId]);
-    sendTeamJoinedEmail(u.email, {
-      userName: u.name ?? "Athlete",
-      teamName: team.name,
-      sport: team.sport,
-      location: team.location ?? "",
-      captainName: captainRow.rows[0]?.name ?? "Captain",
-      teamId,
-    }).catch(() => {});
+    const team = teamRow.rows[0];
+    const u = userRow.rows[0];
+    if (u?.email) {
+      const captainRow = await pool.query(`SELECT name FROM "user" WHERE id = $1`, [team.captainId]);
+      sendTeamJoinedEmail(u.email, {
+        userName: u.name ?? "Athlete",
+        teamName: team.name,
+        sport: team.sport,
+        location: team.location ?? "",
+        captainName: captainRow.rows[0]?.name ?? "Captain",
+        teamId,
+      }).catch(() => {});
+    }
+
+    revalidatePath("/teams");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/teams");
+    return {};
+  } catch (e) {
+    console.error("[joinTeam]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
   }
-
-  revalidatePath("/teams");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/teams");
 }
 
-export async function leaveTeam(teamId: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-  await ensureTeamMembersTable();
+export async function leaveTeam(teamId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureTeamMembersTable();
 
-  await pool.query(
-    `DELETE FROM "team_member" WHERE "teamId" = $1 AND "userId" = $2`,
-    [teamId, session.user.id]
-  );
+    await pool.query(
+      `DELETE FROM "team_member" WHERE "teamId" = $1 AND "userId" = $2`,
+      [teamId, session.user.id]
+    );
 
-  revalidatePath("/teams");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/teams");
+    revalidatePath("/teams");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/teams");
+    return {};
+  } catch (e) {
+    console.error("[leaveTeam]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
 }
 
 export async function getMembershipMap(teamIds: string[]): Promise<Set<string>> {

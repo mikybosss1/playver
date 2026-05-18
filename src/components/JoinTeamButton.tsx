@@ -14,36 +14,37 @@ interface Props {
 export default function JoinTeamButton({ teamId, isMember, joinLabel, leaveLabel }: Props) {
   const [member, setMember] = useState(isMember);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   function handleClick() {
+    setError(null);
     startTransition(async () => {
-      try {
-        if (member) {
-          await leaveTeam(teamId);
-          setMember(false);
-        } else {
-          await joinTeam(teamId);
-          setMember(true);
-        }
-        router.refresh();
-      } catch {
-        // silently ignore
+      const result = member ? await leaveTeam(teamId) : await joinTeam(teamId);
+      if (result.error) {
+        console.error("[JoinTeamButton]", result.error);
+        setError(result.error);
+        return;
       }
+      setMember(!member);
+      router.refresh();
     });
   }
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={isPending}
-      className={`mt-auto px-4 py-2 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-60 ${
-        member
-          ? "border-zinc-300 text-zinc-600 hover:bg-zinc-50"
-          : "bg-[#e21d12] text-white border-[#e21d12] hover:bg-[#d41810]"
-      }`}
-    >
-      {isPending ? "..." : member ? leaveLabel : joinLabel}
-    </button>
+    <div className="flex flex-col gap-1">
+      <button
+        onClick={handleClick}
+        disabled={isPending}
+        className={`mt-auto px-4 py-2 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-60 ${
+          member
+            ? "border-zinc-300 text-zinc-600 hover:bg-zinc-50"
+            : "bg-[#e21d12] text-white border-[#e21d12] hover:bg-[#d41810]"
+        }`}
+      >
+        {isPending ? "..." : member ? leaveLabel : joinLabel}
+      </button>
+      {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+    </div>
   );
 }
