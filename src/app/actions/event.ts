@@ -297,10 +297,11 @@ export async function joinEvent(eventId: string) {
   await ensureEventParticipantsTable();
 
   const event = await pool.query(
-    `SELECT id, "organizerId", capacity FROM "event" WHERE id = $1`,
+    `SELECT id, "organizerId", capacity, "endDateTime" FROM "event" WHERE id = $1`,
     [eventId]
   );
   if (event.rows.length === 0) throw new Error("Event not found");
+  if (new Date(event.rows[0].endDateTime) < new Date()) throw new Error("Event has ended");
 
   if (event.rows[0].capacity) {
     const participants = await pool.query(
@@ -372,10 +373,11 @@ export async function joinEventWithForm(
   await ensureFormTables();
 
   const event = await pool.query(
-    `SELECT id, "organizerId", capacity FROM "event" WHERE id = $1`,
+    `SELECT id, "organizerId", capacity, "endDateTime" FROM "event" WHERE id = $1`,
     [eventId]
   );
   if (event.rows.length === 0) throw new Error("Event not found");
+  if (new Date(event.rows[0].endDateTime) < new Date()) throw new Error("Event has ended");
 
   if (event.rows[0].capacity) {
     const participants = await pool.query(
