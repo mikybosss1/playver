@@ -7,9 +7,8 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const env = readFileSync(resolve(__dirname, "../.env.local"), "utf8");
 const DATABASE_URL = env.match(/^DATABASE_URL=(.+)$/m)?.[1].trim();
-if (!DATABASE_URL) { console.error("DATABASE_URL not found"); process.exit(1); }
-
-const pool = new Pool({ connectionString: DATABASE_URL });
+const PROD_DATABASE_URL = env.match(/^PROD_DATABASE_URL=(.+)$/m)?.[1].trim();
+if (!DATABASE_URL) { console.error("DATABASE_URL not found in .env.local"); process.exit(1); }
 
 const tables = [
   {
@@ -51,10 +50,18 @@ const tables = [
   },
 ];
 
-console.log("Running migration...");
-for (const { name, sql } of tables) {
-  await pool.query(sql);
-  console.log(`✓ ${name}`);
+async function run(label, url) {
+  const pool = new Pool({ connectionString: url });
+  console.log(`\n[${label}] Running migration...`);
+  for (const { name, sql } of tables) {
+    await pool.query(sql);
+    console.log(`[${label}] ✓ ${name}`);
+  }
+  await pool.end();
 }
-await pool.end();
+
+await run("stage", DATABASE_URL);
+if (PROD_DATABASE_URL) await run("prod", PROD_DATABASE_URL);
+else console.log("\n(Skipping prod — PROD_DATABASE_URL not set in .env.local)");
+
 console.log("\nDone.");

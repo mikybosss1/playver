@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import type { EventItem } from "@/app/actions/event";
+import { formatPrice } from "@/lib/format-price";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
@@ -50,7 +51,7 @@ export default function EventCard({
   joinedLabel: string;
   organizerLabel: string;
   onViewed?: (event: EventItem) => void;
-  href?: `/discover/${string}`;
+  href?: `/events/${string}`;
   action?: React.ReactNode;
 }) {
   const isEnded = new Date(event.endDateTime) < new Date();
@@ -62,8 +63,8 @@ export default function EventCard({
       {cover ? (
         <Image src={cover} alt={event.title} fill className="object-cover" />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-zinc-100 text-4xl font-bold text-[#e21d12]">
-          {event.title[0]?.toUpperCase()}
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200 text-5xl font-black text-zinc-300 select-none">
+          {event.sport[0]?.toUpperCase()}
         </div>
       )}
       <div className="absolute left-5 top-5 rounded-full bg-white px-5 py-2 text-xs font-extrabold uppercase tracking-wide text-[#c32722] shadow-sm">
@@ -78,47 +79,51 @@ export default function EventCard({
   );
 
   return (
-    <article className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+    <article className="flex flex-col h-full overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md">
       {href ? (
-        <Link href={href} onClick={() => onViewed?.(event)} className="relative block h-48 w-full overflow-hidden text-left">
+        <Link href={href} onClick={() => onViewed?.(event)} className="relative block h-44 w-full shrink-0 overflow-hidden text-left">
           {media}
         </Link>
       ) : onViewed ? (
-        <button type="button" onClick={() => onViewed(event)} className="relative block h-48 w-full overflow-hidden text-left">
+        <button type="button" onClick={() => onViewed(event)} className="relative block h-44 w-full shrink-0 overflow-hidden text-left">
           {media}
         </button>
       ) : (
-        <div className="relative h-48 w-full overflow-hidden">{media}</div>
+        <div className="relative h-44 w-full shrink-0 overflow-hidden">{media}</div>
       )}
 
-      <div className="px-6 pb-6 pt-5">
-        <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="flex flex-col flex-1 px-5 pb-5 pt-4">
+        <div className="mb-4 flex items-start justify-between gap-3">
           {href ? (
-            <Link href={href} onClick={() => onViewed?.(event)} className="text-xl font-extrabold leading-tight text-zinc-950 hover:text-[#e21d12]">
+            <Link href={href} onClick={() => onViewed?.(event)} className="text-base font-extrabold leading-snug text-zinc-950 hover:text-[#e21d12]">
               {event.title}
             </Link>
           ) : (
-            <h3 className="text-xl font-extrabold leading-tight text-zinc-950">{event.title}</h3>
+            <h3 className="text-base font-extrabold leading-snug text-zinc-950">{event.title}</h3>
           )}
-          <span className="shrink-0 text-xl font-extrabold uppercase text-emerald-600">{freeLabel}</span>
+          {event.price > 0 ? (
+            <span className="shrink-0 text-base font-extrabold text-[#e21d12]">{formatPrice(event.price)}</span>
+          ) : (
+            <span className="shrink-0 text-base font-extrabold uppercase text-emerald-600">{freeLabel}</span>
+          )}
         </div>
 
-        <div className="flex flex-col gap-3 text-base font-medium text-zinc-500">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2.5 text-sm font-medium text-zinc-500">
+          <div className="flex items-center gap-2.5">
             <CalendarIcon />
             <span>{formatDate(event.startDateTime)}</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <LocationIcon />
             <span>{event.location}</span>
           </div>
         </div>
 
-        <div className="my-6 h-px bg-zinc-100" />
+        <div className="my-4 h-px bg-zinc-100" />
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-extrabold uppercase text-zinc-500">
+        <div className="mt-auto flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-extrabold uppercase text-zinc-500">
               {action ?? event.organizerName?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -126,9 +131,9 @@ export default function EventCard({
               <p className="truncate text-sm font-extrabold text-zinc-900">{event.organizerName}</p>
             </div>
           </div>
-          <div className="w-40 max-w-[56%]">
-            <p className="mb-2 text-right text-sm font-extrabold text-zinc-900">{joinedLabel}</p>
-            <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+          <div className="w-36 max-w-[50%]">
+            <p className="mb-1.5 text-right text-xs font-extrabold text-zinc-900">{joinedLabel}</p>
+            <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
               <div className="h-full rounded-full bg-[#e21d12]" style={{ width: `${progress}%` }} />
             </div>
           </div>

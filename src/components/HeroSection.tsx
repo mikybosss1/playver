@@ -40,7 +40,7 @@ export default function HeroSection({ isLoggedIn }: { isLoggedIn: boolean }) {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
-            href="/discover"
+            href="/events"
             className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold text-white rounded-lg shadow-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
           >
             {t("cta")}

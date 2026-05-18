@@ -190,7 +190,7 @@ export default async function TeamDetailsPage({
                             {upcomingEvents.map((event) => (
                               <Link
                                 key={event.id}
-                                href={`/discover/${event.id}`}
+                                href={`/events/${event.id}`}
                                 className="group flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 hover:shadow-md transition-shadow"
                               >
                                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#e21d12]/8 text-xl">
@@ -219,7 +219,7 @@ export default async function TeamDetailsPage({
                             {pastEvents.map((event) => (
                               <Link
                                 key={event.id}
-                                href={`/discover/${event.id}`}
+                                href={`/events/${event.id}`}
                                 className="group flex items-start gap-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4 hover:shadow-md transition-shadow"
                               >
                                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-zinc-200 text-xl">

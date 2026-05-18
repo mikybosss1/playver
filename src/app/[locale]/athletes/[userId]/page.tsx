@@ -265,7 +265,7 @@ function EventCard({
 
   return (
     <Link
-      href={`/discover/${event.id}`}
+      href={`/events/${event.id}`}
       className={`group flex items-start gap-4 rounded-2xl border p-4 hover:shadow-md transition-shadow ${
         past ? "border-zinc-100 bg-zinc-50" : "border-zinc-200 bg-white"
       }`}

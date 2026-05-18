@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { EventItem, EventParticipant } from "@/app/actions/event";
+import { adminRemoveParticipant } from "@/app/actions/admin";
 
 type TabKey = "details" | "agenda" | "results" | "participants" | "gallery";
 
@@ -51,13 +52,31 @@ function isVideo(url: string) {
 
 export default function EventDetailsTabs({
   event,
-  participants,
+  participants: initialParticipants,
+  isSuperAdmin = false,
 }: {
   event: EventItem;
   participants: EventParticipant[];
+  isSuperAdmin?: boolean;
 }) {
   const t = useTranslations("EventDetails");
   const [activeTab, setActiveTab] = useState<TabKey>("details");
+  const [participants, setParticipants] = useState(initialParticipants);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  function handleRemoveParticipant(userId: string) {
+    setRemovingId(userId);
+    startTransition(async () => {
+      try {
+        await adminRemoveParticipant(event.id, userId);
+        setParticipants((prev) => prev.filter((p) => p.id !== userId));
+      } catch {
+        // keep current state
+      }
+      setRemovingId(null);
+    });
+  }
   const capacity = event.capacity ?? 0;
   const end = new Date(event.endDateTime);
   const duration = `${formatTime(event.startDateTime)} - ${formatTime(event.endDateTime)}`;
@@ -172,10 +191,20 @@ export default function EventDetailsTabs({
                 <div className="flex size-12 items-center justify-center overflow-hidden rounded-full bg-zinc-100 font-extrabold text-zinc-500">
                   {participant.image ? <Image src={participant.image} alt={participant.name} width={48} height={48} className="size-12 object-cover" /> : participant.name[0]?.toUpperCase()}
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-extrabold text-zinc-950">{participant.name}</p>
                   <p className="text-sm text-zinc-400">{formatDate(participant.joinedAt)}</p>
                 </div>
+                {isSuperAdmin && (
+                  <button
+                    type="button"
+                    disabled={removingId === participant.id}
+                    onClick={() => handleRemoveParticipant(participant.id)}
+                    className="shrink-0 px-2.5 py-1 text-xs font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {removingId === participant.id ? "..." : t("removeParticipant")}
+                  </button>
+                )}
               </div>
             ))}
           </div>

@@ -6,27 +6,38 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import EventJoinButton from "@/components/EventJoinButton";
 import EventDetailsTabs from "@/components/EventDetailsTabs";
+import AdminDeleteEventButton from "@/components/AdminDeleteEventButton";
+import AdminAddParticipant from "@/components/AdminAddParticipant";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
-import { getEventById, getEventParticipants, getEventParticipationMap } from "@/app/actions/event";
+import { getEventById, getEventParticipants, getEventParticipationMap, getEventFormFields } from "@/app/actions/event";
+import { getUserRole } from "@/app/actions/admin";
+import { formatPrice } from "@/lib/stripe";
 
 export default async function EventDetailsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ eventId: string }>;
+  searchParams: Promise<{ payment?: string }>;
 }) {
-  const [{ eventId }, t, session] = await Promise.all([
+  const [{ eventId }, t, session, { payment }] = await Promise.all([
     params,
     getTranslations("EventDetails"),
     auth.api.getSession({ headers: await headers() }),
+    searchParams,
   ]);
+  const paymentSuccess = payment === "success";
   const event = await getEventById(eventId);
   if (!event) notFound();
 
-  const [joinedSet, participants] = await Promise.all([
+  const [joinedSet, participants, formFields, userRole] = await Promise.all([
     session ? getEventParticipationMap([event.id]) : Promise.resolve(new Set<string>()),
     getEventParticipants(event.id),
+    event.customFormEnabled ? getEventFormFields(event.id) : Promise.resolve([]),
+    session ? getUserRole(session.user.id) : Promise.resolve("player" as const),
   ]);
+  const isSuperAdmin = userRole === "super_admin";
   const isOrganizer = session?.user?.id === event.organizerId;
   const isEnded = new Date(event.endDateTime) < new Date();
   const capacity = event.capacity ?? 0;
@@ -40,9 +51,18 @@ export default async function EventDetailsPage({
       <Navbar />
       <main className="flex-1 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
-          <Link href="/discover" className="mb-6 inline-flex text-sm font-semibold text-[#e21d12] hover:underline">
+          <Link href="/events" className="mb-6 inline-flex text-sm font-semibold text-[#e21d12] hover:underline">
             {t("back")}
           </Link>
+
+          {paymentSuccess && (
+            <div className="mb-6 flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm font-semibold text-emerald-700">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              {t("paymentSuccess")}
+            </div>
+          )}
 
           <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
             <div className="relative h-[320px] overflow-hidden bg-zinc-100">
@@ -71,7 +91,11 @@ export default async function EventDetailsPage({
                   </h1>
                   <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">{event.eventType}</p>
                 </div>
-                <span className="text-2xl font-extrabold uppercase text-emerald-600">{t("free")}</span>
+                {event.price > 0 ? (
+                  <span className="text-2xl font-extrabold text-[#e21d12]">{formatPrice(event.price)}</span>
+                ) : (
+                  <span className="text-2xl font-extrabold uppercase text-emerald-600">{t("free")}</span>
+                )}
               </div>
 
               <aside className="h-fit rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
@@ -84,25 +108,34 @@ export default async function EventDetailsPage({
                   {t("organizedBy")}: <span className="font-semibold text-zinc-700">{event.organizerName}</span>
                 </p>
 
-                <div className="mt-6">
-                  {isOrganizer ? (
+                <div className="mt-6 flex flex-col gap-2">
+                  {isOrganizer && (
                     <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
                       {t("yourEvent")}
                     </span>
-                  ) : session ? (
+                  )}
+                  {session && (
                     <EventJoinButton
                       eventId={event.id}
                       isJoined={joinedSet.has(event.id)}
                       joinLabel={t("join")}
                       leaveLabel={t("leave")}
+                      price={event.price}
+                      formFields={formFields}
                     />
-                  ) : null}
+                  )}
+                  {isSuperAdmin && (
+                    <>
+                      <AdminAddParticipant eventId={event.id} />
+                      <AdminDeleteEventButton eventId={event.id} eventTitle={event.title} />
+                    </>
+                  )}
                 </div>
               </aside>
             </div>
           </section>
 
-          <EventDetailsTabs event={event} participants={participants} />
+          <EventDetailsTabs event={event} participants={participants} isSuperAdmin={isSuperAdmin} />
         </div>
       </main>
       <Footer />

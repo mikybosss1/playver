@@ -143,7 +143,7 @@ export async function getAthleteProfile(userId: string): Promise<AthleteProfile 
     user: {
       ...user,
       createdAt: new Date(user.createdAt).toISOString(),
-      image: toISO(user.image) ? user.image : null,
+      image: user.image ?? null,
       bio: user.bio ?? "",
       mainSport: user.mainSport ?? null,
     },

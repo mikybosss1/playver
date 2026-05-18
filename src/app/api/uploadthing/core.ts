@@ -28,6 +28,13 @@ export const ourFileRouter = {
   })
     .middleware(() => ({}))
     .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
+
+  registrationFile: f({
+    image: { maxFileSize: "8MB", maxFileCount: 1 },
+    pdf: { maxFileSize: "8MB", maxFileCount: 1 },
+  })
+    .middleware(() => ({}))
+    .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

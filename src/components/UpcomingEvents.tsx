@@ -37,7 +37,7 @@ export default async function UpcomingEvents({ events }: { events: EventItem[] }
                   ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
                   : t("joinedCount", { count: event.participantCount })}
                 organizerLabel={t("organizedBy")}
-                href={`/discover/${event.id}`}
+                href={`/events/${event.id}`}
               />
             ))}
           </div>
@@ -45,7 +45,7 @@ export default async function UpcomingEvents({ events }: { events: EventItem[] }
 
         <div className="flex justify-center mt-12">
           <Link
-            href="/discover"
+            href="/events"
             className="px-8 py-3 text-sm font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors shadow"
           >
             {t("viewAll")}

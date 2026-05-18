@@ -6,7 +6,7 @@ import { Link, usePathname } from "@/i18n/routing";
 import LanguageToggle from "./LanguageToggle";
 import { useSession } from "@/lib/auth-client";
 
-const navHrefs = ["/discover", "/teams", "/request-a-feature"] as const;
+const navHrefs = ["/events", "/teams", "/request-a-feature"] as const;
 
 export default function Navbar() {
   const t = useTranslations("Navbar");
