@@ -15,12 +15,23 @@ async function ensureTeamMembersTable() {
         "id"        text PRIMARY KEY,
         "teamId"    text NOT NULL REFERENCES "team"("id") ON DELETE CASCADE,
         "userId"    text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-        "joinedAt"  timestamp NOT NULL DEFAULT NOW(),
-        UNIQUE("teamId", "userId")
+        "joinedAt"  timestamp NOT NULL DEFAULT NOW()
       )`
     ),
     pool.query(`ALTER TABLE "team" ADD COLUMN IF NOT EXISTS "coverImageUrl" text`),
-  ]).then(() => undefined);
+  ]).then(async () => {
+    // Fix: drop the wrong single-column unique constraint if it exists,
+    // then ensure the correct (teamId, userId) pair constraint is in place.
+    await pool.query(`
+      ALTER TABLE "team_member"
+        DROP CONSTRAINT IF EXISTS "team_member_teamId_key",
+        DROP CONSTRAINT IF EXISTS "team_member_teamId_userId_key";
+    `);
+    await pool.query(`
+      ALTER TABLE "team_member"
+        ADD CONSTRAINT "team_member_teamId_userId_key" UNIQUE ("teamId", "userId");
+    `);
+  });
   await teamMembersTablePromise;
 }
 
