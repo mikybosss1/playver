@@ -253,7 +253,7 @@ export default function EventDetailsTabs({
             <MetricCard icon={<span>▣</span>} label={t("startDate")} value={formatDate(event.startDateTime)} />
             <MetricCard icon={<span>◷</span>} label={t("duration")} value={duration} />
             <MetricCard icon={<span>⌖</span>} label={t("location")} value={event.location} />
-            <MetricCard icon={<span>♟</span>} label={t("teams")} value={`${event.participantCount}/${capacity || "-"}`} />
+            <MetricCard icon={<span>♟</span>} label={t("tabParticipants")} value={`${event.participantCount}/${capacity || "-"}`} />
             <MetricCard icon={<span>♟</span>} label={t("spectators")} value="0/50" />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
+import { sendTeamJoinedEmail } from "@/lib/emails";
 
 let teamMembersTablePromise: Promise<void> | null = null;
 
@@ -172,10 +173,30 @@ export async function joinTeam(teamId: string) {
   );
   if (existing.rows.length > 0) throw new Error("Already a member");
 
+  const [teamRow, userRow] = await Promise.all([
+    pool.query(`SELECT id, name, sport, location, "captainId" FROM "team" WHERE id = $1`, [teamId]),
+    pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [session.user.id]),
+  ]);
+  if (!teamRow.rows.length) throw new Error("Team not found");
+
   await pool.query(
     `INSERT INTO "team_member" (id, "teamId", "userId") VALUES ($1, $2, $3)`,
     [crypto.randomUUID(), teamId, session.user.id]
   );
+
+  const team = teamRow.rows[0];
+  const u = userRow.rows[0];
+  if (u?.email) {
+    const captainRow = await pool.query(`SELECT name FROM "user" WHERE id = $1`, [team.captainId]);
+    sendTeamJoinedEmail(u.email, {
+      userName: u.name ?? "Athlete",
+      teamName: team.name,
+      sport: team.sport,
+      location: team.location ?? "",
+      captainName: captainRow.rows[0]?.name ?? "Captain",
+      teamId,
+    }).catch(() => {});
+  }
 
   revalidatePath("/teams");
   revalidatePath("/dashboard");

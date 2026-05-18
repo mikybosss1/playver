@@ -1,0 +1,60 @@
+import { Resend } from "resend";
+
+export const resend = new Resend(process.env.RESEND_API_KEY);
+export const FROM = "Playver <noreply@playver.ca>";
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://playver.ca";
+
+export function layout(body: string) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Playver</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+
+        <!-- Logo bar -->
+        <tr><td style="padding-bottom:28px;text-align:center;">
+          <span style="font-size:26px;font-weight:900;color:#e21d12;letter-spacing:-0.5px;">Playver</span>
+        </td></tr>
+
+        <!-- Card -->
+        <tr><td style="background:#ffffff;border-radius:20px;padding:40px 36px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+          ${body}
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="padding-top:24px;text-align:center;font-size:12px;color:#a1a1aa;">
+          © ${new Date().getFullYear()} Playver · <a href="${BASE_URL}" style="color:#a1a1aa;">playver.ca</a>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function ctaButton(href: string, label: string) {
+  return `<a href="${href}" style="display:inline-block;margin-top:28px;padding:14px 28px;background:#e21d12;color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">${label}</a>`;
+}
+
+export function detail(icon: string, label: string, value: string) {
+  return `<tr>
+    <td style="padding:7px 0;vertical-align:top;">
+      <span style="font-size:16px;margin-right:10px;">${icon}</span>
+      <span style="font-size:13px;color:#71717a;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">${label}</span>
+    </td>
+    <td style="padding:7px 0;vertical-align:top;text-align:right;">
+      <span style="font-size:14px;color:#18181b;font-weight:600;">${value}</span>
+    </td>
+  </tr>`;
+}
+
+export function detailTable(...rows: string[]) {
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #f4f4f5;border-bottom:1px solid #f4f4f5;margin-bottom:8px;">${rows.join("")}</table>`;
+}
