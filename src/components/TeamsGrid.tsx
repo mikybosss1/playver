@@ -65,25 +65,36 @@ export default function TeamsGrid({ teams, currentUserId, initialJoinedIds }: Pr
             const isCaptain = currentUserId === team.captainId;
             const isMember = joinedSet.has(team.id);
             return (
-              <div key={team.id} className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm flex flex-col gap-4 hover:shadow-md transition-shadow">
-                <Link href={`/teams/${team.id}`} className="flex items-center gap-3">
-                  {team.logoUrl ? (
-                    <Image
-                      src={team.logoUrl}
-                      alt={team.name}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-full object-cover border border-zinc-100 shrink-0"
-                    />
+              <div key={team.id} className="bg-white border border-zinc-200 rounded-xl shadow-sm flex flex-col hover:shadow-md transition-shadow overflow-hidden">
+                {/* Cover + logo */}
+                <Link href={`/teams/${team.id}`} className="relative block h-32 bg-zinc-900 shrink-0">
+                  {team.coverImageUrl ? (
+                    <Image src={team.coverImageUrl} alt={team.name} fill className="object-contain" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-[#e21d12]/10 flex items-center justify-center text-[#e21d12] font-bold text-lg shrink-0">
-                      {team.name[0].toUpperCase()}
-                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#e21d12]/20 via-[#e21d12]/8 to-zinc-100" />
                   )}
-                  <div>
-                    <p className="font-bold text-zinc-900 text-base leading-tight group-hover:text-[#e21d12]">{team.name}</p>
-                    <p className="text-xs text-zinc-400 font-medium">{team.sport}</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                  <div className="absolute bottom-3 left-4">
+                    {team.logoUrl ? (
+                      <Image
+                        src={team.logoUrl}
+                        alt={team.name}
+                        width={44}
+                        height={44}
+                        className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center text-[#e21d12] font-bold text-lg border-2 border-white shadow-sm">
+                        {team.name[0].toUpperCase()}
+                      </div>
+                    )}
                   </div>
+                </Link>
+
+                <div className="p-4 flex flex-col gap-3 flex-1">
+                <Link href={`/teams/${team.id}`} className="flex flex-col">
+                    <p className="font-bold text-zinc-900 text-base leading-tight hover:text-[#e21d12] transition-colors">{team.name}</p>
+                    <p className="text-xs text-zinc-400 font-medium mt-0.5">{team.sport}</p>
                 </Link>
 
                 <div className="flex items-center gap-1.5 text-zinc-500 text-sm">
@@ -102,19 +113,22 @@ export default function TeamsGrid({ teams, currentUserId, initialJoinedIds }: Pr
                   <span>{team.memberCount} {t("members")}</span>
                 </div>
 
-                {currentUserId && !isCaptain && (
-                  <JoinTeamButton
-                    teamId={team.id}
-                    isMember={isMember}
-                    joinLabel={t("join")}
-                    leaveLabel={t("leave")}
-                  />
-                )}
-                {isCaptain && (
-                  <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#e21d12]/10 text-[#e21d12] text-center">
-                    {t("yourTeam")}
-                  </span>
-                )}
+                <div className="mt-auto">
+                  {currentUserId && !isCaptain && (
+                    <JoinTeamButton
+                      teamId={team.id}
+                      isMember={isMember}
+                      joinLabel={t("join")}
+                      leaveLabel={t("leave")}
+                    />
+                  )}
+                  {isCaptain && (
+                    <span className="block px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#e21d12]/10 text-[#e21d12] text-center">
+                      {t("yourTeam")}
+                    </span>
+                  )}
+                </div>
+                </div>
               </div>
             );
           })}

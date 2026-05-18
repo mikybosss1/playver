@@ -86,7 +86,8 @@
     "leave": "Quitter",
     "yourTeam": "Votre équipe",
     "searchPlaceholder": "Rechercher des équipes ou des lieux...",
-    "noResults": "Aucune équipe ne correspond à votre recherche."
+    "noResults": "Aucune équipe ne correspond à votre recherche.",
+    "createTeam": "Créer une équipe"
   },
   "TeamDetails": {
     "back": "Retour aux équipes",

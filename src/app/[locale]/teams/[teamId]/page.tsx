@@ -82,8 +82,18 @@ export default async function TeamDetailsPage({
 
           <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
             {/* Hero */}
-            <div className="relative flex min-h-72 items-center justify-center overflow-hidden bg-[#e21d12]/8 px-6 py-12">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(226,29,18,0.18),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(226,29,18,0.12),transparent_35%)]" />
+            <div className="relative flex min-h-72 items-center justify-center overflow-hidden px-6 py-12 bg-zinc-900">
+              {team.coverImageUrl ? (
+                <>
+                  <Image src={team.coverImageUrl} alt={team.name} fill className="object-contain" />
+                  <div className="absolute inset-0 bg-black/40" />
+                </>
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-[#e21d12]/8" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(226,29,18,0.18),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(226,29,18,0.12),transparent_35%)]" />
+                </>
+              )}
               <div className="relative z-10 flex flex-col items-center text-center">
                 {team.logoUrl ? (
                   <Image src={team.logoUrl} alt={team.name} width={112} height={112} className="size-28 rounded-full border-4 border-white object-cover shadow-md" />
@@ -92,11 +102,11 @@ export default async function TeamDetailsPage({
                     {team.name[0]?.toUpperCase()}
                   </div>
                 )}
-                <p className="mt-5 text-sm font-extrabold uppercase tracking-wide text-[#c32722]">{team.sport}</p>
-                <h1 className="mt-2 text-4xl font-extrabold leading-tight text-zinc-950" style={{ fontFamily: "var(--font-playfair)" }}>
+                <p className={`mt-5 text-sm font-extrabold uppercase tracking-wide ${team.coverImageUrl ? "text-white/80" : "text-[#c32722]"}`}>{team.sport}</p>
+                <h1 className={`mt-2 text-4xl font-extrabold leading-tight ${team.coverImageUrl ? "text-white" : "text-zinc-950"}`} style={{ fontFamily: "var(--font-playfair)" }}>
                   {team.name}
                 </h1>
-                <div className="mt-4 flex items-center gap-2 text-base font-semibold text-zinc-600">
+                <div className={`mt-4 flex items-center gap-2 text-base font-semibold ${team.coverImageUrl ? "text-white/80" : "text-zinc-600"}`}>
                   <LocationIcon />
                   <span>{team.location}</span>
                 </div>

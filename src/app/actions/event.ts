@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
+import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail } from "@/lib/emails";
 
 let eventParticipantsTablePromise: Promise<void> | null = null;
 
@@ -303,13 +304,59 @@ export async function getTeamEvents(teamId: string): Promise<EventItem[]> {
   return result.rows.map(serializeEvent);
 }
 
+async function fireJoinEmails(
+  userId: string,
+  eventId: string,
+  eventRow: { title: string; sport: string; location: string; startDateTime: Date | string; organizerId: string; capacity: number | null }
+) {
+  const [userRow, organizerRow] = await Promise.all([
+    pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [userId]),
+    pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [eventRow.organizerId]),
+  ]);
+  const u = userRow.rows[0];
+  const org = organizerRow.rows[0];
+  const emailData = {
+    eventTitle: eventRow.title,
+    sport: eventRow.sport,
+    location: eventRow.location,
+    startDateTime: new Date(eventRow.startDateTime).toISOString(),
+    eventId,
+  };
+  if (u?.email) sendEventJoinedEmail(u.email, { userName: u.name ?? "Athlete", ...emailData }).catch(() => {});
+  const isOrganizerJoining = userId === eventRow.organizerId;
+  if (!isOrganizerJoining && org?.email) {
+    let participantCount = 1;
+    let isFull = false;
+    if (eventRow.capacity) {
+      const countRes = await pool.query(`SELECT COUNT(*) FROM "event_participant" WHERE "eventId" = $1`, [eventId]);
+      participantCount = Number(countRes.rows[0].count);
+      isFull = participantCount >= Number(eventRow.capacity);
+    }
+    sendNewParticipantEmail(org.email, {
+      organizerName: org.name ?? "Organizer",
+      participantName: u?.name ?? "Athlete",
+      participantCount,
+      capacity: eventRow.capacity ? Number(eventRow.capacity) : null,
+      ...emailData,
+    }).catch(() => {});
+    if (isFull) {
+      sendEventFullEmail(org.email, {
+        organizerName: org.name ?? "Organizer",
+        eventTitle: eventRow.title,
+        eventId,
+        capacity: Number(eventRow.capacity),
+      }).catch(() => {});
+    }
+  }
+}
+
 export async function joinEvent(eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
   await ensureEventParticipantsTable();
 
   const event = await pool.query(
-    `SELECT id, "organizerId", capacity, "endDateTime" FROM "event" WHERE id = $1`,
+    `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
     [eventId]
   );
   if (event.rows.length === 0) throw new Error("Event not found");
@@ -331,6 +378,8 @@ export async function joinEvent(eventId: string) {
      ON CONFLICT ("eventId", "userId") DO NOTHING`,
     [crypto.randomUUID(), eventId, session.user.id]
   );
+
+  fireJoinEmails(session.user.id, eventId, event.rows[0]).catch(() => {});
 
   revalidatePath("/events");
   revalidatePath("/dashboard");
@@ -385,7 +434,7 @@ export async function joinEventWithForm(
   await ensureFormTables();
 
   const event = await pool.query(
-    `SELECT id, "organizerId", capacity, "endDateTime" FROM "event" WHERE id = $1`,
+    `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
     [eventId]
   );
   if (event.rows.length === 0) throw new Error("Event not found");
@@ -407,6 +456,8 @@ export async function joinEventWithForm(
      ON CONFLICT ("eventId", "userId") DO NOTHING`,
     [crypto.randomUUID(), eventId, session.user.id]
   );
+
+  fireJoinEmails(session.user.id, eventId, event.rows[0]).catch(() => {});
 
   for (const response of responses) {
     if (response.value !== undefined && response.value !== "") {

@@ -86,7 +86,8 @@
     "leave": "Leave Team",
     "yourTeam": "Your Team",
     "searchPlaceholder": "Search teams or locations...",
-    "noResults": "No teams match your search."
+    "noResults": "No teams match your search.",
+    "createTeam": "Create Team"
   },
   "TeamDetails": {
     "back": "Back to Teams",
