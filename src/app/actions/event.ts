@@ -25,6 +25,7 @@ let formTablesReady: Promise<void> | null = null;
 async function ensureFormTables() {
   formTablesReady ??= (async () => {
     await pool.query(`ALTER TABLE "event" ADD COLUMN IF NOT EXISTS "customFormEnabled" boolean NOT NULL DEFAULT false`);
+    await pool.query(`ALTER TABLE "event" ADD COLUMN IF NOT EXISTS "galleryItems" JSONB NOT NULL DEFAULT '[]'::jsonb`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "event_form_field" (
         "id"        text PRIMARY KEY,
@@ -50,6 +51,8 @@ async function ensureFormTables() {
   })();
   await formTablesReady;
 }
+
+export type GalleryItem = { url: string; type: "image" | "video" };
 
 export type FormFieldType = 'text' | 'number' | 'dropdown' | 'checkbox' | 'file';
 
@@ -78,6 +81,7 @@ type EventRow = {
   endDateTime: Date | string;
   coverImageUrl: string | null;
   galleryUrls: string[] | null;
+  galleryItems: GalleryItem[] | null;
   registrationMode: string;
   capacity: number | null;
   maxPlayersPerTeam: number | null;
@@ -93,6 +97,10 @@ type EventRow = {
 };
 
 function serializeEvent(row: EventRow) {
+  const rawItems: GalleryItem[] = row.galleryItems ?? [];
+  const galleryItems: GalleryItem[] = rawItems.length > 0
+    ? rawItems
+    : (row.galleryUrls ?? []).map(url => ({ url, type: "image" as const }));
   return {
     ...row,
     startDateTime: new Date(row.startDateTime).toISOString(),
@@ -100,6 +108,7 @@ function serializeEvent(row: EventRow) {
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
     galleryUrls: row.galleryUrls ?? [],
+    galleryItems,
     participantCount: Number(row.participantCount ?? 0),
     customFormEnabled: row.customFormEnabled ?? false,
     price: Number(row.price ?? 0),
@@ -123,7 +132,7 @@ export async function createEvent(data: {
   startDateTime: string;
   endDateTime: string;
   coverImageUrl?: string;
-  galleryUrls?: string[];
+  galleryItems?: GalleryItem[];
   registrationMode: string;
   capacity?: number;
   maxPlayersPerTeam?: number;
@@ -144,18 +153,21 @@ export async function createEvent(data: {
 
   await ensureFormTables();
 
+  const galleryItems = data.galleryItems ?? [];
+  const galleryUrls = galleryItems.map(i => i.url);
+
   const id = crypto.randomUUID();
   await pool.query(
     `INSERT INTO "event" (
        id, title, sport, "eventType", location,
-       "startDateTime", "endDateTime", "coverImageUrl", "galleryUrls",
+       "startDateTime", "endDateTime", "coverImageUrl", "galleryUrls", "galleryItems",
        "registrationMode", capacity, "maxPlayersPerTeam",
        description, rules, "organizerId", "customFormEnabled", price, "createdAt", "updatedAt"
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,NOW(),NOW())`,
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW(),NOW())`,
     [
       id, data.title, data.sport, data.eventType, data.location,
       data.startDateTime, data.endDateTime, data.coverImageUrl ?? null,
-      data.galleryUrls ?? [],
+      galleryUrls, JSON.stringify(galleryItems),
       data.registrationMode, data.capacity ?? null, data.maxPlayersPerTeam ?? null,
       data.description ?? null, data.rules ?? null, session.user.id,
       data.customFormEnabled ?? false, data.price ?? 0,

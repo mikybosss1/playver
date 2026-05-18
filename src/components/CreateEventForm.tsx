@@ -343,12 +343,15 @@ export default function CreateEventForm({
       setUploadingCover(false);
     }
 
-    let galleryUrls: string[] = [];
+    let galleryItems: { url: string; type: "image" | "video" }[] = [];
     if (galleryFiles.length > 0) {
       setUploadingGallery(true);
       try {
         const res = await uploadGallery(galleryFiles);
-        galleryUrls = (res ?? []).map(r => r.ufsUrl ?? r.url);
+        galleryItems = (res ?? []).map((r, i) => ({
+          url: r.ufsUrl ?? r.url,
+          type: (galleryFiles[i]?.type ?? "").startsWith("video") ? "video" : "image",
+        }));
       } catch { setError(t("uploadError")); setUploadingGallery(false); return; }
       setUploadingGallery(false);
     }
@@ -360,7 +363,7 @@ export default function CreateEventForm({
           startDateTime: `${startDate}T${startTime}`,
           endDateTime: `${endDate}T${endTime}`,
           coverImageUrl,
-          galleryUrls,
+          galleryItems,
           registrationMode,
           capacity: capacity ? parseInt(capacity) : undefined,
           maxPlayersPerTeam: registrationMode === "team" && maxPlayersPerTeam ? parseInt(maxPlayersPerTeam) : undefined,
