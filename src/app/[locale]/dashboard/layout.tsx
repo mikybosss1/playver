@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { pool } from "@/lib/db";
 import Navbar from "@/components/Navbar";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -15,9 +16,15 @@ export default async function DashboardLayout({
     redirect("/auth/signin");
   }
 
+  const roleResult = await pool.query(
+    `SELECT role FROM "user" WHERE id = $1`,
+    [session.user.id]
+  );
+
   const user = {
     name: session.user.name ?? "",
     email: session.user.email ?? "",
+    role: (roleResult.rows[0]?.role ?? "player") as string,
   };
 
   return (

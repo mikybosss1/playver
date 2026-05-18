@@ -6,9 +6,70 @@ import Image from "next/image";
 import { useRouter } from "@/i18n/routing";
 import { createEvent } from "@/app/actions/event";
 import { useUploadThing } from "@/lib/uploadthing";
+import type { FormFieldType } from "@/app/actions/event";
+
+const TIME_SLOTS = Array.from({ length: 96 }, (_, i) => {
+  const hour24 = Math.floor(i / 4);
+  const minute = (i % 4) * 15;
+  const period = hour24 < 12 ? "AM" : "PM";
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  const label = `${hour12}:${String(minute).padStart(2, "0")} ${period}`;
+  const value = `${String(hour24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  return { label, value };
+});
+
+function TimeSelect({
+  value,
+  onChange,
+  minValue,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  minValue?: string;
+  className?: string;
+}) {
+  const slots = minValue
+    ? TIME_SLOTS.filter((s) => s.value > minValue)
+    : TIME_SLOTS;
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={className}
+      >
+        <option value="">-- : --</option>
+        {slots.map((slot) => (
+          <option key={slot.value} value={slot.value}>{slot.label}</option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </span>
+    </div>
+  );
+}
 
 const SPORTS = ["Soccer","Basketball","Volleyball","Pickleball","Tennis","Hockey","Baseball","Cricket","Rugby","Other"];
 const EVENT_TYPES = ["League","Tournament","Pickup Game","Training / Practice","Activity"];
+const FIELD_TYPES: { value: FormFieldType; labelKey: string }[] = [
+  { value: "text",     labelKey: "customFormTypeText" },
+  { value: "number",   labelKey: "customFormTypeNumber" },
+  { value: "dropdown", labelKey: "customFormTypeDropdown" },
+  { value: "checkbox", labelKey: "customFormTypeCheckbox" },
+  { value: "file",     labelKey: "customFormTypeFile" },
+];
+
+type FormFieldDraft = {
+  id: string;
+  label: string;
+  fieldType: FormFieldType;
+  required: boolean;
+  options: string[];
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -26,6 +87,138 @@ function Field({ label, required, children }: { label: string; required?: boolea
         {label} {required && <span className="text-[#e21d12]">*</span>}
       </label>
       {children}
+    </div>
+  );
+}
+
+function FormFieldBuilder({
+  field,
+  index,
+  t,
+  inputClass,
+  onChange,
+  onRemove,
+}: {
+  field: FormFieldDraft;
+  index: number;
+  t: ReturnType<typeof useTranslations>;
+  inputClass: string;
+  onChange: (updates: Partial<FormFieldDraft>) => void;
+  onRemove: () => void;
+}) {
+  const needsOptions = field.fieldType === "dropdown" || field.fieldType === "checkbox";
+
+  function addOption() {
+    onChange({ options: [...field.options, ""] });
+  }
+
+  function updateOption(i: number, value: string) {
+    const updated = field.options.map((o, idx) => (idx === i ? value : o));
+    onChange({ options: updated });
+  }
+
+  function removeOption(i: number) {
+    onChange({ options: field.options.filter((_, idx) => idx !== i) });
+  }
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">
+          {t("customFormQuestion")} {index + 1}
+        </span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-xs font-semibold text-zinc-400 hover:text-red-500 transition-colors"
+        >
+          {t("customFormRemove")}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-600">{t("customFormTypeLabel")}</label>
+          <select
+            value={field.fieldType}
+            onChange={e => onChange({ fieldType: e.target.value as FormFieldType, options: [] })}
+            className={inputClass}
+          >
+            {FIELD_TYPES.map(ft => (
+              <option key={ft.value} value={ft.value}>{t(ft.labelKey)}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-600">{t("customFormLabelLabel")}</label>
+          <input
+            type="text"
+            value={field.label}
+            onChange={e => onChange({ label: e.target.value })}
+            placeholder={t("customFormLabelPlaceholder")}
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      {needsOptions && (
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-zinc-600">{t("customFormOptionsLabel")}</label>
+          {field.options.map((opt, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={opt}
+                onChange={e => updateOption(i, e.target.value)}
+                placeholder={`${t("customFormOptionPlaceholder")} ${i + 1}`}
+                className={`${inputClass} flex-1`}
+              />
+              <button
+                type="button"
+                onClick={() => removeOption(i)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addOption}
+            className="self-start text-xs font-semibold text-[#e21d12] hover:text-[#c32722] transition-colors"
+          >
+            {t("customFormAddOption")}
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-center gap-1 pt-1">
+        <span className="text-xs text-zinc-500 mr-2">{t("customFormRequiredToggle")}:</span>
+        <button
+          type="button"
+          onClick={() => onChange({ required: false })}
+          className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
+            !field.required
+              ? "bg-zinc-800 text-white border-zinc-800"
+              : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400"
+          }`}
+        >
+          {t("customFormOptional")}
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange({ required: true })}
+          className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
+            field.required
+              ? "bg-[#e21d12] text-white border-[#e21d12]"
+              : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400"
+          }`}
+        >
+          {t("customFormRequired")}
+        </button>
+      </div>
     </div>
   );
 }
@@ -55,6 +248,14 @@ export default function CreateEventForm({
   const [description, setDescription] = useState("");
   const [rules, setRules] = useState("");
   const [error, setError] = useState("");
+
+  // Pricing
+  const [isPaid, setIsPaid] = useState(false);
+  const [priceAmount, setPriceAmount] = useState("");
+
+  // Custom form
+  const [customFormEnabled, setCustomFormEnabled] = useState(false);
+  const [formFields, setFormFields] = useState<FormFieldDraft[]>([]);
 
   // Cover image
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -92,11 +293,43 @@ export default function CreateEventForm({
     setGalleryPreviews(updated.map(f => URL.createObjectURL(f)));
   }
 
+  function addFormField() {
+    setFormFields(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), label: "", fieldType: "text", required: false, options: [] },
+    ]);
+  }
+
+  function updateFormField(id: string, updates: Partial<FormFieldDraft>) {
+    setFormFields(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+  }
+
+  function removeFormField(id: string) {
+    setFormFields(prev => prev.filter(f => f.id !== id));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !sport || !eventType || !location || !startDate || !startTime || !endDate || !endTime) {
       setError(t("requiredFields"));
       return;
+    }
+    if (new Date(`${endDate}T${endTime}`) <= new Date(`${startDate}T${startTime}`)) {
+      setError(t("endBeforeStart"));
+      return;
+    }
+    if (isPaid && (!priceAmount || parseFloat(priceAmount) <= 0)) {
+      setError(t("priceRequired"));
+      return;
+    }
+    if (customFormEnabled) {
+      const hasEmptyLabel = formFields.some(f => !f.label.trim());
+      if (hasEmptyLabel) { setError(t("customFormNoLabel")); return; }
+      for (const f of formFields) {
+        if ((f.fieldType === "dropdown" || f.fieldType === "checkbox") && f.options.filter(o => o.trim()).length === 0) {
+          setError(t("customFormNoOptions")); return;
+        }
+      }
     }
     setError("");
 
@@ -133,11 +366,22 @@ export default function CreateEventForm({
           maxPlayersPerTeam: registrationMode === "team" && maxPlayersPerTeam ? parseInt(maxPlayersPerTeam) : undefined,
           description: description || undefined,
           rules: rules || undefined,
+          price: isPaid && priceAmount ? Math.round(parseFloat(priceAmount) * 100) : 0,
+          customFormEnabled,
+          formFields: customFormEnabled
+            ? formFields.map((f, i) => ({
+                label: f.label.trim(),
+                fieldType: f.fieldType,
+                required: f.required,
+                options: f.options.filter(o => o.trim()),
+                order: i,
+              }))
+            : undefined,
         });
         if (onSuccess) {
           onSuccess();
         } else {
-          router.push({ pathname: "/discover", query: { created: "event" } });
+          router.push({ pathname: "/events", query: { created: "event" } });
         }
       } catch {
         setError(t("createError"));
@@ -178,15 +422,20 @@ export default function CreateEventForm({
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={inputClass} />
           </Field>
           <Field label={t("startTimeLabel")} required>
-            <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={inputClass} />
+            <TimeSelect value={startTime} onChange={setStartTime} className={`${inputClass} appearance-none`} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label={t("endDateLabel")} required>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={inputClass} />
+            <input type="date" value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} className={inputClass} />
           </Field>
           <Field label={t("endTimeLabel")} required>
-            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={inputClass} />
+            <TimeSelect
+              value={endTime}
+              onChange={setEndTime}
+              minValue={endDate && startDate && endDate === startDate ? startTime : undefined}
+              className={`${inputClass} appearance-none`}
+            />
           </Field>
         </div>
       </Section>
@@ -297,6 +546,92 @@ export default function CreateEventForm({
               placeholder={t("maxPlayersPlaceholder")} className={inputClass}
             />
           </Field>
+        )}
+
+        {/* Pricing */}
+        <div className="pt-1 border-t border-zinc-100">
+          <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">{t("sectionPricing")}</p>
+          <div className="flex gap-3 mb-3">
+            {([false, true] as const).map((paid) => (
+              <button
+                key={String(paid)}
+                type="button"
+                onClick={() => { setIsPaid(paid); if (!paid) setPriceAmount(""); }}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg border transition-colors ${
+                  isPaid === paid
+                    ? "bg-[#e21d12] text-white border-[#e21d12]"
+                    : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                }`}
+              >
+                {paid ? t("pricingPaid") : t("pricingFree")}
+              </button>
+            ))}
+          </div>
+          {isPaid && (
+            <Field label={t("priceLabel")}>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-semibold text-sm">$</span>
+                <input
+                  type="number"
+                  min="0.50"
+                  step="0.01"
+                  value={priceAmount}
+                  onChange={e => setPriceAmount(e.target.value)}
+                  placeholder={t("pricePlaceholder")}
+                  className={`${inputClass} pl-8`}
+                />
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">{t("priceHint")}</p>
+            </Field>
+          )}
+        </div>
+
+        {/* Custom form toggle */}
+        <div className="pt-1 border-t border-zinc-100">
+          <button
+            type="button"
+            onClick={() => { setCustomFormEnabled(v => !v); if (customFormEnabled) setFormFields([]); }}
+            className="w-full flex items-center justify-between py-3 px-4 rounded-xl border border-zinc-200 bg-zinc-50 hover:border-zinc-300 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+              </svg>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-zinc-700">{t("customFormToggle")}</p>
+                <p className="text-xs text-zinc-400">{t("customFormToggleHint")}</p>
+              </div>
+            </div>
+            <div className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${customFormEnabled ? "bg-[#e21d12]" : "bg-zinc-200"}`}>
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${customFormEnabled ? "translate-x-6" : "translate-x-1"}`} />
+            </div>
+          </button>
+        </div>
+
+        {/* Form builder */}
+        {customFormEnabled && (
+          <div className="flex flex-col gap-3 pt-1">
+            <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">{t("customFormSection")}</p>
+            {formFields.map((field, index) => (
+              <FormFieldBuilder
+                key={field.id}
+                field={field}
+                index={index}
+                t={t}
+                inputClass={inputClass}
+                onChange={updates => updateFormField(field.id, updates)}
+                onRemove={() => removeFormField(field.id)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={addFormField}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-zinc-200 hover:border-[#e21d12] hover:text-[#e21d12] text-zinc-400 text-sm font-semibold transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              {t("customFormAdd")}
+            </button>
+          </div>
         )}
       </Section>
 

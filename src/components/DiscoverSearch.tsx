@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import EventCard from "@/components/EventCard";
 import type { EventItem } from "@/app/actions/event";
@@ -33,14 +33,21 @@ export default function DiscoverSearch({
   const [activeType, setActiveType] = useState<EventType>("all");
   const [sport, setSport] = useState<Sport>("all");
   const [upcomingOnly, setUpcomingOnly] = useState(false);
-  const [recentIds, setRecentIds] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
     try {
-      return JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? "[]");
+      const stored = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+      if (Array.isArray(stored) && stored.length > 0) setRecentIds(stored);
     } catch {
-      return [];
+      // ignore corrupt data
     }
-  });
+  }, []);
+
+  useEffect(() => {
+    setPage(0);
+  }, [search, activeType, sport, upcomingOnly]);
 
   const eventTypes: { key: EventType; label: string }[] = [
     { key: "all", label: t("typeAll") },
@@ -91,10 +98,13 @@ export default function DiscoverSearch({
     window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   }
 
+  const PAGE_SIZE = 6;
   const hasActiveSearch = search.trim() || activeType !== "all" || sport !== "all" || upcomingOnly;
   const joinedLabel = (event: EventItem) => event.capacity
     ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
     : t("joinedCount", { count: event.participantCount });
+  const totalPages = Math.ceil(filteredEvents.length / PAGE_SIZE);
+  const visibleEvents = filteredEvents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="mt-10 flex flex-col gap-8">
@@ -164,6 +174,7 @@ export default function DiscoverSearch({
         </div>
       </form>
 
+      {/* Recently Viewed — commented out for now
       {recentlyViewed.length > 0 && (
         <section>
           <h2 className="text-base font-bold text-zinc-700 mb-4">{t("recentlyViewed")}</h2>
@@ -176,26 +187,56 @@ export default function DiscoverSearch({
                 endedLabel={t("eventEnded")}
                 joinedLabel={joinedLabel(event)}
                 organizerLabel={t("organizedBy")}
-                href={`/discover/${event.id}`}
+                href={`/events/${event.id}`}
                 onViewed={rememberEvent}
               />
             ))}
           </div>
         </section>
       )}
+      */}
 
       <section>
-        <h2 className="text-base font-bold text-zinc-700 mb-4">
-          {hasActiveSearch ? t("searchResults") : t("popularEvents")}
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-zinc-700">
+            {hasActiveSearch ? t("searchResults") : t("popularEvents")}
+          </h2>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page === 0}
+                className="flex items-center justify-center w-8 h-8 rounded-full border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous page"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <span className="text-sm text-zinc-500 font-medium tabular-nums">{page + 1} / {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page === totalPages - 1}
+                className="flex items-center justify-center w-8 h-8 rounded-full border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next page"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
             <span className="text-5xl">🔍</span>
             <p className="text-zinc-500 text-base">{t("noEvents")}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredEvents.map((event) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+            {visibleEvents.map((event) => (
               <EventCard
                 key={event.id}
                 event={event}
@@ -203,7 +244,7 @@ export default function DiscoverSearch({
                 endedLabel={t("eventEnded")}
                 joinedLabel={joinedLabel(event)}
                 organizerLabel={t("organizedBy")}
-                href={`/discover/${event.id}`}
+                href={`/events/${event.id}`}
                 onViewed={rememberEvent}
               />
             ))}

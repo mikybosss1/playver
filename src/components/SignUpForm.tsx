@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
-import { signUp } from "@/lib/auth-client";
+import { signIn, signUp } from "@/lib/auth-client";
 
 function EyeIcon({ show }: { show: boolean }) {
   return show ? (
@@ -34,6 +34,13 @@ export default function SignUpForm() {
   const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    await signIn.social({ provider: "google", callbackURL: "/dashboard" });
+    setGoogleLoading(false);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -173,7 +180,9 @@ export default function SignUpForm() {
       {/* Google OAuth */}
       <button
         type="button"
-        className="w-full flex items-center justify-center gap-3 py-3 text-sm font-semibold text-zinc-700 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm"
+        onClick={handleGoogleSignIn}
+        disabled={googleLoading}
+        className="w-full flex items-center justify-center gap-3 py-3 text-sm font-semibold text-zinc-700 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 disabled:opacity-60 transition-colors shadow-sm"
       >
         <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>

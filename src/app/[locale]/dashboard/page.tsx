@@ -74,7 +74,7 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold text-zinc-900">{t("upcomingEvents")}</h2>
-            <Link href="/discover" className="text-xs font-semibold text-[#e21d12] hover:underline">
+            <Link href="/events" className="text-xs font-semibold text-[#e21d12] hover:underline">
               {t("browseEvents")}
             </Link>
           </div>

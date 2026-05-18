@@ -41,7 +41,7 @@ export default async function DashboardEventsPage() {
                 endedLabel={t("eventEnded")}
                 joinedLabel={joinedLabel(event)}
                 organizerLabel={t("organizedBy")}
-                href={`/discover/${event.id}`}
+                href={`/events/${event.id}`}
               />
             ))}
           </div>
@@ -65,7 +65,7 @@ export default async function DashboardEventsPage() {
                 endedLabel={t("eventEnded")}
                 joinedLabel={joinedLabel(event)}
                 organizerLabel={t("organizedBy")}
-                href={`/discover/${event.id}`}
+                href={`/events/${event.id}`}
               />
             ))}
           </div>

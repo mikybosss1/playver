@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import DiscoverSearch from "@/components/DiscoverSearch";
 import SuccessToast from "@/components/SuccessToast";
+import CreateEventButton from "@/components/CreateEventButton";
 import { auth } from "@/lib/auth";
 import { getEventParticipationMap, getEvents } from "@/app/actions/event";
 
@@ -28,16 +29,25 @@ export default async function DiscoverPage({
       {params.created === "event" && <SuccessToast message={t("eventCreated")} />}
       <main className="flex-1 bg-white">
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-16">
-          <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-4">
-            {t("eyebrow")}
-          </p>
-          <h1
-            className="text-4xl sm:text-5xl font-bold text-zinc-900 mb-4"
-            style={{ fontFamily: "var(--font-playfair)" }}
-          >
-            {t("title")}
-          </h1>
-          <p className="text-zinc-500 text-lg max-w-2xl">{t("subtitle")}</p>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-4">
+                {t("eyebrow")}
+              </p>
+              <h1
+                className="text-4xl sm:text-5xl font-bold text-zinc-900 mb-4"
+                style={{ fontFamily: "var(--font-playfair)" }}
+              >
+                {t("title")}
+              </h1>
+              <p className="text-zinc-500 text-lg max-w-2xl">{t("subtitle")}</p>
+            </div>
+            {session && (
+              <div className="shrink-0 pt-1">
+                <CreateEventButton label={t("createEvent")} />
+              </div>
+            )}
+          </div>
 
           <DiscoverSearch
             events={events}

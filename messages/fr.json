@@ -1,7 +1,7 @@
 {
   "Navbar": {
     "search": "Rechercher des matchs, équipes ou joueurs...",
-    "discover": "Découvrir",
+    "discover": "Événements",
     "teams": "Équipes",
     "requestFeature": "Demander une fonctionnalité",
     "login": "Connexion",
@@ -11,7 +11,7 @@
     "eyebrow": "Trouvez votre prochain",
     "title": "Bienvenue sur Playver",
     "subtitle": "Découvrez des matchs sportifs locaux, connectez-vous avec des joueurs près de chez vous et améliorez votre jeu. Playver rend la recherche de votre match parfait sans effort.",
-    "cta": "Découvrir les événements",
+    "cta": "Voir les événements",
     "createEvent": "Créer un événement"
   },
   "HowItWorks": {
@@ -38,7 +38,7 @@
   },
   "Discover": {
     "eyebrow": "Explorer",
-    "title": "Découvrir des événements",
+    "title": "Événements",
     "subtitle": "Trouvez et rejoignez les meilleures communautés sportives, ligues compétitives et sessions récréatives près de chez vous.",
     "searchPlaceholder": "Rechercher des événements...",
     "typeAll": "Tous",
@@ -72,7 +72,8 @@
     "join": "Rejoindre",
     "leave": "Quitter",
     "yourEvent": "Votre événement",
-    "eventCreated": "Événement créé avec succès."
+    "eventCreated": "Événement créé avec succès.",
+    "createEvent": "Créer un événement"
   },
   "Teams": {
     "eyebrow": "Communauté",
@@ -158,7 +159,7 @@
     "joinedEventsTitle": "Événements rejoints",
     "organizerBadge": "Organisateur",
     "emptyMyEvents": "Vous n'avez pas encore créé d'événements.",
-    "emptyJoinedEvents": "Vous n'avez pas encore rejoint d'événements. Découvrez les événements pour en trouver un !",
+    "emptyJoinedEvents": "Vous n'avez pas encore rejoint d'événements. Parcourez les événements pour en trouver un !",
     "joinedProgress": "{joined} / {capacity} rejoints",
     "joinedCount": "{count} rejoints",
     "free": "GRATUIT",
@@ -166,7 +167,7 @@
     "organizedBy": "Organisé par"
   },
   "EventDetails": {
-    "back": "Retour à Découvrir",
+    "back": "Retour aux événements",
     "free": "GRATUIT",
     "eventEnded": "Événement terminé",
     "date": "Date",
@@ -200,7 +201,20 @@
     "firstToRegister": "Soyez le premier à vous inscrire !",
     "galleryTitle": "Galerie de l'événement",
     "noGallery": "Aucun média pour l'instant",
-    "galleryHint": "L'organisateur peut partager des images et vidéos ici."
+    "galleryHint": "L'organisateur peut partager des images et vidéos ici.",
+    "registrationTitle": "Compléter l'inscription",
+    "registrationSubtitle": "Veuillez remplir les informations ci-dessous pour rejoindre cet événement.",
+    "registrationCancel": "Annuler",
+    "registrationFieldRequired": "est obligatoire.",
+    "registrationError": "Échec de la participation. Veuillez réessayer.",
+    "registrationSelectPlaceholder": "Sélectionner une option...",
+    "registrationUploadFile": "Cliquez pour téléverser un fichier",
+    "registrationUploading": "Téléversement...",
+    "registrationFileUploaded": "Fichier sélectionné — téléversement...",
+    "registrationFileReady": "Fichier téléversé avec succès",
+    "paymentSuccess": "Paiement confirmé ! Vous êtes maintenant inscrit à cet événement.",
+    "payToJoin": "Payer",
+    "removeParticipant": "Retirer"
   },
   "CreateTeam": {
     "title": "Créer une équipe",
@@ -264,13 +278,43 @@
     "rulesLabel": "Règles de l'événement (Optionnel)",
     "rulesPlaceholder": "Directives, équipement nécessaire, etc.",
     "requiredFields": "Veuillez remplir tous les champs obligatoires.",
+    "endBeforeStart": "La date et l'heure de fin doivent être après le début.",
     "uploadError": "Échec du téléversement. Veuillez réessayer.",
     "createError": "Échec de la création. Veuillez réessayer.",
     "uploadingCover": "Téléversement de la couverture...",
     "uploadingGallery": "Téléversement de la galerie...",
     "cancel": "Annuler",
     "submit": "Créer l'événement",
-    "creating": "Création..."
+    "creating": "Création...",
+    "customFormToggle": "Besoin d'informations supplémentaires des participants ?",
+    "customFormToggleHint": "Ajoutez des questions que les participants doivent répondre pour s'inscrire",
+    "customFormSection": "Questions du formulaire d'inscription",
+    "customFormAdd": "Ajouter une question",
+    "customFormTypeLabel": "Type",
+    "customFormLabelLabel": "Question",
+    "customFormLabelPlaceholder": "ex. Taille du maillot",
+    "customFormRequired": "Obligatoire",
+    "customFormOptional": "Optionnel",
+    "customFormRequiredToggle": "Réponse",
+    "customFormTypeText": "Réponse courte",
+    "customFormTypeNumber": "Nombre",
+    "customFormTypeDropdown": "Liste déroulante",
+    "customFormTypeCheckbox": "Cases à cocher",
+    "customFormTypeFile": "Téléversement de fichier",
+    "customFormOptionsLabel": "Options",
+    "customFormAddOption": "+ Ajouter une option",
+    "customFormOptionPlaceholder": "Option",
+    "customFormRemove": "Supprimer",
+    "customFormQuestion": "Question",
+    "customFormNoLabel": "Veuillez saisir une question pour chaque champ.",
+    "customFormNoOptions": "Les listes déroulantes et cases à cocher nécessitent au moins une option.",
+    "sectionPricing": "Tarification",
+    "pricingFree": "Gratuit",
+    "pricingPaid": "Payant",
+    "priceLabel": "Frais d'entrée (CAD)",
+    "pricePlaceholder": "ex. 10.00",
+    "priceHint": "Ce montant sera facturé aux participants pour rejoindre l'événement.",
+    "priceRequired": "Veuillez entrer des frais d'entrée valides pour les événements payants."
   },
   "DashboardProfile": {
     "eyebrow": "Profil",
@@ -337,7 +381,7 @@
     "noTeams": "Vous n'avez pas encore rejoint d'équipes.",
     "joinTeam": "Trouver une équipe",
     "quickActions": "Actions rapides",
-    "actionDiscover": "Découvrir des événements",
+    "actionDiscover": "Voir les événements",
     "actionTeams": "Parcourir les équipes",
     "actionRequestFeature": "Demander une fonctionnalité",
     "navOverview": "Vue d'ensemble",
@@ -345,7 +389,8 @@
     "navTeams": "Équipes",
     "navEvents": "Événements",
     "navWallet": "Portefeuille",
-    "navSettings": "Paramètres"
+    "navSettings": "Paramètres",
+    "navRoles": "Rôles"
   },
   "SignIn": {
     "title": "Bon retour",
@@ -380,6 +425,22 @@
     "googleButton": "Continuer avec Google",
     "hasAccount": "Vous avez déjà un compte ?",
     "signInLink": "Se connecter"
+  },
+  "AdminRoles": {
+    "eyebrow": "Admin",
+    "title": "Gestion des rôles",
+    "subtitle": "Gérez les rôles et les permissions des utilisateurs sur la plateforme",
+    "usersCount": "utilisateurs",
+    "searchPlaceholder": "Rechercher par nom ou courriel...",
+    "rolePlayer": "Joueur",
+    "roleOrganizer": "Organisateur",
+    "roleSuperAdmin": "Super Admin",
+    "memberSince": "Membre depuis",
+    "deleteUser": "Supprimer",
+    "deleteTitle": "Supprimer l'utilisateur",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer {name} ? Cette action est irréversible.",
+    "deleteConfirmButton": "Supprimer",
+    "cancelButton": "Annuler"
   },
   "Footer": {
     "tagline": "Playver | Organisez & Découvrez des événements sportifs",
