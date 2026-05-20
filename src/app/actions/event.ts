@@ -9,15 +9,25 @@ import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail } fro
 let eventParticipantsTablePromise: Promise<void> | null = null;
 
 async function ensureEventParticipantsTable() {
-  eventParticipantsTablePromise ??= pool.query(
-    `CREATE TABLE IF NOT EXISTS "event_participant" (
-      "id"        text PRIMARY KEY,
-      "eventId"   text NOT NULL REFERENCES "event"("id") ON DELETE CASCADE,
-      "userId"    text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-      "joinedAt"  timestamp NOT NULL DEFAULT NOW(),
-      UNIQUE("eventId", "userId")
-    )`
-  ).then(() => undefined);
+  eventParticipantsTablePromise ??= (async () => {
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS "event_participant" (
+        "id"        text PRIMARY KEY,
+        "eventId"   text NOT NULL REFERENCES "event"("id") ON DELETE CASCADE,
+        "userId"    text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+        "joinedAt"  timestamp NOT NULL DEFAULT NOW()
+      )`
+    );
+    await pool.query(`
+      ALTER TABLE "event_participant"
+        DROP CONSTRAINT IF EXISTS "event_participant_eventId_key",
+        DROP CONSTRAINT IF EXISTS "event_participant_eventId_userId_key";
+    `);
+    await pool.query(`
+      ALTER TABLE "event_participant"
+        ADD CONSTRAINT "event_participant_eventId_userId_key" UNIQUE ("eventId", "userId");
+    `);
+  })();
   await eventParticipantsTablePromise;
 }
 
