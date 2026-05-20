@@ -357,55 +357,67 @@ async function fireJoinEmails(
   }
 }
 
-export async function joinEvent(eventId: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-  await ensureEventParticipantsTable();
+export async function joinEvent(eventId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureEventParticipantsTable();
 
-  const event = await pool.query(
-    `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
-    [eventId]
-  );
-  if (event.rows.length === 0) throw new Error("Event not found");
-  if (new Date(event.rows[0].endDateTime) < new Date()) throw new Error("Event has ended");
-
-  if (event.rows[0].capacity) {
-    const participants = await pool.query(
-      `SELECT COUNT(*) FROM "event_participant" WHERE "eventId" = $1`,
+    const event = await pool.query(
+      `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
       [eventId]
     );
-    if (Number(participants.rows[0].count) >= Number(event.rows[0].capacity)) {
-      throw new Error("Event is full");
+    if (event.rows.length === 0) return { error: "Event not found" };
+    if (new Date(event.rows[0].endDateTime) < new Date()) return { error: "Event has ended" };
+
+    if (event.rows[0].capacity) {
+      const participants = await pool.query(
+        `SELECT COUNT(*) FROM "event_participant" WHERE "eventId" = $1`,
+        [eventId]
+      );
+      if (Number(participants.rows[0].count) >= Number(event.rows[0].capacity)) {
+        return { error: "Event is full" };
+      }
     }
+
+    await pool.query(
+      `INSERT INTO "event_participant" (id, "eventId", "userId")
+       VALUES ($1, $2, $3)
+       ON CONFLICT ("eventId", "userId") DO NOTHING`,
+      [crypto.randomUUID(), eventId, session.user.id]
+    );
+
+    fireJoinEmails(session.user.id, eventId, event.rows[0]).catch(() => {});
+
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/events");
+    return {};
+  } catch (e) {
+    console.error("[joinEvent]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
   }
-
-  await pool.query(
-    `INSERT INTO "event_participant" (id, "eventId", "userId")
-     VALUES ($1, $2, $3)
-     ON CONFLICT ("eventId", "userId") DO NOTHING`,
-    [crypto.randomUUID(), eventId, session.user.id]
-  );
-
-  fireJoinEmails(session.user.id, eventId, event.rows[0]).catch(() => {});
-
-  revalidatePath("/events");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/events");
 }
 
-export async function leaveEvent(eventId: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-  await ensureEventParticipantsTable();
+export async function leaveEvent(eventId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureEventParticipantsTable();
 
-  await pool.query(
-    `DELETE FROM "event_participant" WHERE "eventId" = $1 AND "userId" = $2`,
-    [eventId, session.user.id]
-  );
+    await pool.query(
+      `DELETE FROM "event_participant" WHERE "eventId" = $1 AND "userId" = $2`,
+      [eventId, session.user.id]
+    );
 
-  revalidatePath("/events");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/events");
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/events");
+    return {};
+  } catch (e) {
+    console.error("[leaveEvent]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
 }
 
 export async function updateEvent(eventId: string, data: {
@@ -515,49 +527,55 @@ export async function getEventFormFields(eventId: string): Promise<FormField[]> 
 export async function joinEventWithForm(
   eventId: string,
   responses: FormResponseInput[]
-) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-  await ensureEventParticipantsTable();
-  await ensureFormTables();
+): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureEventParticipantsTable();
+    await ensureFormTables();
 
-  const event = await pool.query(
-    `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
-    [eventId]
-  );
-  if (event.rows.length === 0) throw new Error("Event not found");
-  if (new Date(event.rows[0].endDateTime) < new Date()) throw new Error("Event has ended");
-
-  if (event.rows[0].capacity) {
-    const participants = await pool.query(
-      `SELECT COUNT(*) FROM "event_participant" WHERE "eventId" = $1`,
+    const event = await pool.query(
+      `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
       [eventId]
     );
-    if (Number(participants.rows[0].count) >= Number(event.rows[0].capacity)) {
-      throw new Error("Event is full");
-    }
-  }
+    if (event.rows.length === 0) return { error: "Event not found" };
+    if (new Date(event.rows[0].endDateTime) < new Date()) return { error: "Event has ended" };
 
-  await pool.query(
-    `INSERT INTO "event_participant" (id, "eventId", "userId")
-     VALUES ($1, $2, $3)
-     ON CONFLICT ("eventId", "userId") DO NOTHING`,
-    [crypto.randomUUID(), eventId, session.user.id]
-  );
-
-  fireJoinEmails(session.user.id, eventId, event.rows[0]).catch(() => {});
-
-  for (const response of responses) {
-    if (response.value !== undefined && response.value !== "") {
-      await pool.query(
-        `INSERT INTO "event_form_response" (id, "eventId", "userId", "fieldId", value)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [crypto.randomUUID(), eventId, session.user.id, response.fieldId, response.value]
+    if (event.rows[0].capacity) {
+      const participants = await pool.query(
+        `SELECT COUNT(*) FROM "event_participant" WHERE "eventId" = $1`,
+        [eventId]
       );
+      if (Number(participants.rows[0].count) >= Number(event.rows[0].capacity)) {
+        return { error: "Event is full" };
+      }
     }
-  }
 
-  revalidatePath("/events");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/events");
+    await pool.query(
+      `INSERT INTO "event_participant" (id, "eventId", "userId")
+       VALUES ($1, $2, $3)
+       ON CONFLICT ("eventId", "userId") DO NOTHING`,
+      [crypto.randomUUID(), eventId, session.user.id]
+    );
+
+    fireJoinEmails(session.user.id, eventId, event.rows[0]).catch(() => {});
+
+    for (const response of responses) {
+      if (response.value !== undefined && response.value !== "") {
+        await pool.query(
+          `INSERT INTO "event_form_response" (id, "eventId", "userId", "fieldId", value)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [crypto.randomUUID(), eventId, session.user.id, response.fieldId, response.value]
+        );
+      }
+    }
+
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/events");
+    return {};
+  } catch (e) {
+    console.error("[joinEventWithForm]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
 }

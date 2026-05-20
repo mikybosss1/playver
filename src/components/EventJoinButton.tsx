@@ -33,6 +33,7 @@ export default function EventJoinButton({
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [fileUploading, setFileUploading] = useState<Record<string, boolean>>({});
   const [formError, setFormError] = useState("");
+  const [joinError, setJoinError] = useState("");
   const router = useRouter();
   const { startUpload } = useUploadThing("registrationFile");
 
@@ -61,12 +62,13 @@ export default function EventJoinButton({
       setShowModal(true);
     } else {
       startTransition(async () => {
-        try {
-          await joinEvent(eventId);
+        setJoinError("");
+        const result = await joinEvent(eventId);
+        if (result.error) {
+          setJoinError(result.error);
+        } else {
           setJoined(true);
           router.refresh();
-        } catch {
-          // keep current state
         }
       });
     }
@@ -74,12 +76,13 @@ export default function EventJoinButton({
 
   function handleLeaveClick() {
     startTransition(async () => {
-      try {
-        await leaveEvent(eventId);
+      setJoinError("");
+      const result = await leaveEvent(eventId);
+      if (result.error) {
+        setJoinError(result.error);
+      } else {
         setJoined(false);
         router.refresh();
-      } catch {
-        // keep current state
       }
     });
   }
@@ -123,13 +126,13 @@ export default function EventJoinButton({
     }));
 
     startTransition(async () => {
-      try {
-        await joinEventWithForm(eventId, responseList);
+      const result = await joinEventWithForm(eventId, responseList);
+      if (result.error) {
+        setFormError(result.error);
+      } else {
         setJoined(true);
         setShowModal(false);
         router.refresh();
-      } catch {
-        setFormError(t("registrationError"));
       }
     });
   }
@@ -157,6 +160,9 @@ export default function EventJoinButton({
         >
           {isPending || paymentLoading ? "..." : price > 0 ? `${t("payToJoin")} ${formatPrice(price)}` : joinLabel}
         </button>
+      )}
+      {joinError && (
+        <p className="text-xs font-semibold text-red-600 text-center">{joinError}</p>
       )}
 
       {showModal && (
