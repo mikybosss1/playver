@@ -16,6 +16,13 @@ function formatTime(value: string) {
   return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
+function formatTimeStr(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
 function IconBadge({ children }: { children: React.ReactNode }) {
   return (
     <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#b72a25] text-xl text-white">
@@ -212,14 +219,13 @@ export default function EventDetailsTabs({
   const capacity = event.capacity ?? 0;
   const end = new Date(event.endDateTime);
   const duration = `${formatTime(event.startDateTime)} - ${formatTime(event.endDateTime)}`;
-  const agendaItems = useMemo(() => [
-    {
-      title: event.title,
-      location: event.location,
-      start: formatTime(event.startDateTime),
-      end: formatTime(event.endDateTime),
-    },
-  ], [event]);
+  const agendaItems = useMemo(() =>
+    [...(event.agendaItems ?? [])].sort((a, b) => {
+      const dateA = `${a.date ?? ""}${a.startTime ?? ""}`;
+      const dateB = `${b.date ?? ""}${b.startTime ?? ""}`;
+      return dateA.localeCompare(dateB);
+    }),
+  [event.agendaItems]);
   const tabs: { key: TabKey; label: string }[] = [
     { key: "details", label: t("tabDetails") },
     { key: "agenda", label: t("tabAgenda") },
@@ -249,12 +255,11 @@ export default function EventDetailsTabs({
 
       {activeTab === "details" && (
         <div className="grid gap-8">
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
-            <MetricCard icon={<span>▣</span>} label={t("startDate")} value={formatDate(event.startDateTime)} />
-            <MetricCard icon={<span>◷</span>} label={t("duration")} value={duration} />
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard icon={<span>▣</span>} label={t("startDate")} value={`${formatDate(event.startDateTime)} · ${formatTime(event.startDateTime)}`} />
+            <MetricCard icon={<span>▣</span>} label={t("endDate")} value={`${formatDate(event.endDateTime)} · ${formatTime(event.endDateTime)}`} />
             <MetricCard icon={<span>⌖</span>} label={t("location")} value={event.location} />
             <MetricCard icon={<span>♟</span>} label={t("tabParticipants")} value={`${event.participantCount}/${capacity || "-"}`} />
-            <MetricCard icon={<span>♟</span>} label={t("spectators")} value="0/50" />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
             <section>
@@ -275,21 +280,37 @@ export default function EventDetailsTabs({
             <IconBadge>▣</IconBadge>
             <h2 className="text-3xl font-extrabold text-[#b72a25]">{t("agendaTitle")}</h2>
           </div>
-          <div className="grid gap-5">
-            {agendaItems.map((item) => (
-              <div key={item.title} className="grid gap-6 rounded-[20px] border border-zinc-100 bg-white p-6 shadow-md md:grid-cols-[130px_1fr]">
-                <div className="border-zinc-100 text-center md:border-r">
-                  <p className="text-xl font-extrabold text-[#b72a25]">{item.start}</p>
-                  <p className="text-base text-zinc-400">{t("to")}</p>
-                  <p className="text-xl font-extrabold text-[#b72a25]">{item.end}</p>
+          {agendaItems.length === 0 ? (
+            <EmptyState
+              icon={<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>}
+              title={t("noAgenda")}
+              subtitle={t("noAgendaHint")}
+            />
+          ) : (
+            <div className="grid gap-5">
+              {agendaItems.map((item, i) => (
+                <div key={i} className="grid gap-6 rounded-[20px] border border-zinc-100 bg-white p-6 shadow-md md:grid-cols-[160px_1fr]">
+                  <div className="border-zinc-100 text-center md:border-r flex flex-col items-center justify-center gap-1">
+                    {item.date && (
+                      <p className="text-sm font-bold text-zinc-500 uppercase tracking-wide">
+                        {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(`${item.date}T12:00:00`))}
+                      </p>
+                    )}
+                    {item.startTime && <p className="text-xl font-extrabold text-[#b72a25]">{formatTimeStr(item.startTime)}</p>}
+                    {item.startTime && item.endTime && <p className="text-sm text-zinc-400">{t("to")}</p>}
+                    {item.endTime && <p className="text-xl font-extrabold text-[#b72a25]">{formatTimeStr(item.endTime)}</p>}
+                    {!item.date && !item.startTime && !item.endTime && (
+                      <span className="text-3xl text-zinc-200">◷</span>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-extrabold text-zinc-950">{item.title}</h3>
+                    {item.description && <p className="mt-3 text-base leading-7 text-zinc-600">{item.description}</p>}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-2xl font-extrabold text-zinc-950">{item.title}</h3>
-                  <p className="mt-4 text-lg font-medium text-emerald-900">📍 {item.location}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

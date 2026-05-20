@@ -190,6 +190,7 @@
     "tabParticipants": "Participants",
     "tabGallery": "Galerie",
     "startDate": "Date de début",
+    "endDate": "Date de fin",
     "duration": "Durée",
     "teams": "Équipes",
     "spectators": "Spectateurs",
@@ -215,7 +216,10 @@
     "registrationFileReady": "Fichier téléversé avec succès",
     "paymentSuccess": "Paiement confirmé ! Vous êtes maintenant inscrit à cet événement.",
     "payToJoin": "Payer",
-    "removeParticipant": "Retirer"
+    "removeParticipant": "Retirer",
+    "editEvent": "Modifier l'événement",
+    "noAgenda": "Pas d'agenda pour l'instant",
+    "noAgendaHint": "L'organisateur ajoutera le programme ici."
   },
   "CreateTeam": {
     "title": "Créer une équipe",
@@ -315,7 +319,23 @@
     "priceLabel": "Frais d'entrée (CAD)",
     "pricePlaceholder": "ex. 10.00",
     "priceHint": "Ce montant sera facturé aux participants pour rejoindre l'événement.",
-    "priceRequired": "Veuillez entrer des frais d'entrée valides pour les événements payants."
+    "priceRequired": "Veuillez entrer des frais d'entrée valides pour les événements payants.",
+    "editTitle": "Modifier l'événement",
+    "saveChanges": "Enregistrer",
+    "saving": "Enregistrement...",
+    "editError": "Échec de l'enregistrement. Veuillez réessayer.",
+    "removeCover": "Supprimer la couverture",
+    "sectionAgenda": "Agenda de l'événement",
+    "agendaAdd": "Ajouter un élément",
+    "agendaItem": "Élément",
+    "agendaItemTitle": "Activité",
+    "agendaItemTitlePlaceholder": "ex. Concours à 3pts",
+    "agendaItemDate": "Date",
+    "agendaItemStart": "Heure de début",
+    "agendaItemEnd": "Heure de fin",
+    "agendaItemDescription": "Notes (Optionnel)",
+    "agendaItemDescriptionPlaceholder": "Détails sur cette activité...",
+    "agendaItemRemove": "Supprimer"
   },
   "DashboardProfile": {
     "eyebrow": "Profil",

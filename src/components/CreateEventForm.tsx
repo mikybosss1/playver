@@ -4,9 +4,14 @@ import { useState, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { useRouter } from "@/i18n/routing";
-import { createEvent } from "@/app/actions/event";
+import { createEvent, updateEvent } from "@/app/actions/event";
 import { useUploadThing } from "@/lib/uploadthing";
-import type { FormFieldType } from "@/app/actions/event";
+import type { FormFieldType, EventItem, FormField, GalleryItem, AgendaItem } from "@/app/actions/event";
+
+function splitDateTime(iso: string) {
+  const s = new Date(iso).toISOString();
+  return { date: s.slice(0, 10), time: s.slice(11, 16) };
+}
 
 const TIME_SLOTS = Array.from({ length: 96 }, (_, i) => {
   const hour24 = Math.floor(i / 4);
@@ -22,16 +27,18 @@ function TimeSelect({
   value,
   onChange,
   minValue,
+  maxValue,
   className,
 }: {
   value: string;
   onChange: (v: string) => void;
   minValue?: string;
+  maxValue?: string;
   className?: string;
 }) {
-  const slots = minValue
-    ? TIME_SLOTS.filter((s) => s.value > minValue)
-    : TIME_SLOTS;
+  const slots = TIME_SLOTS.filter(
+    (s) => (!minValue || s.value > minValue) && (!maxValue || s.value <= maxValue)
+  );
   return (
     <div className="relative">
       <select
@@ -69,6 +76,15 @@ type FormFieldDraft = {
   fieldType: FormFieldType;
   required: boolean;
   options: string[];
+};
+
+type AgendaItemDraft = {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  description: string;
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -223,54 +239,202 @@ function FormFieldBuilder({
   );
 }
 
+function AgendaItemBuilder({
+  item,
+  index,
+  t,
+  inputClass,
+  onChange,
+  onRemove,
+  eventStartDate,
+  eventStartTime,
+  eventEndDate,
+  eventEndTime,
+}: {
+  item: AgendaItemDraft;
+  index: number;
+  t: ReturnType<typeof useTranslations>;
+  inputClass: string;
+  onChange: (updates: Partial<AgendaItemDraft>) => void;
+  onRemove: () => void;
+  eventStartDate: string;
+  eventStartTime: string;
+  eventEndDate: string;
+  eventEndTime: string;
+}) {
+  const isOnStartDay = item.date !== "" && item.date === eventStartDate;
+  const isOnEndDay   = item.date !== "" && item.date === eventEndDate;
+
+  // TimeSelect minValue is exclusive (slot.value > minValue), so pass the slot
+  // just before the event start to enforce "agenda start >= event start"
+  const prevSlot = (hhmm: string) => {
+    const idx = TIME_SLOTS.findIndex(s => s.value === hhmm);
+    return idx > 0 ? TIME_SLOTS[idx - 1].value : undefined;
+  };
+
+  const startTimeMin = isOnStartDay && eventStartTime ? prevSlot(eventStartTime) : undefined;
+  const startTimeMax = isOnEndDay   && eventEndTime   ? eventEndTime : undefined;
+  const endTimeMax   = isOnEndDay   && eventEndTime   ? eventEndTime : undefined;
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">
+          {t("agendaItem")} {index + 1}
+        </span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-xs font-semibold text-zinc-400 hover:text-red-500 transition-colors"
+        >
+          {t("agendaItemRemove")}
+        </button>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-zinc-600">{t("agendaItemTitle")}</label>
+        <input
+          type="text"
+          value={item.title}
+          onChange={e => onChange({ title: e.target.value })}
+          placeholder={t("agendaItemTitlePlaceholder")}
+          className={inputClass}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-zinc-600">{t("agendaItemDate")}</label>
+        <input
+          type="date"
+          value={item.date}
+          min={eventStartDate || undefined}
+          max={eventEndDate || undefined}
+          onChange={e => onChange({ date: e.target.value, startTime: "", endTime: "" })}
+          className={inputClass}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-600">{t("agendaItemStart")}</label>
+          <TimeSelect
+            value={item.startTime}
+            onChange={v => onChange({ startTime: v, endTime: "" })}
+            minValue={startTimeMin}
+            maxValue={startTimeMax}
+            className={`${inputClass} appearance-none`}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-600">{t("agendaItemEnd")}</label>
+          <TimeSelect
+            value={item.endTime}
+            onChange={v => onChange({ endTime: v })}
+            minValue={item.startTime || undefined}
+            maxValue={endTimeMax}
+            className={`${inputClass} appearance-none`}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-zinc-600">{t("agendaItemDescription")}</label>
+        <input
+          type="text"
+          value={item.description}
+          onChange={e => onChange({ description: e.target.value })}
+          placeholder={t("agendaItemDescriptionPlaceholder")}
+          className={inputClass}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function CreateEventForm({
   onSuccess,
   onCancel,
+  initialData,
+  initialFormFields,
+  eventId,
 }: {
   onSuccess?: () => void;
   onCancel?: () => void;
+  initialData?: EventItem;
+  initialFormFields?: FormField[];
+  eventId?: string;
 }) {
   const t = useTranslations("CreateEvent");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const isEditMode = Boolean(eventId);
 
-  const [title, setTitle] = useState("");
-  const [sport, setSport] = useState("");
-  const [eventType, setEventType] = useState("");
-  const [location, setLocation] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [registrationMode, setRegistrationMode] = useState<"individual" | "team">("individual");
-  const [capacity, setCapacity] = useState("");
-  const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState("");
-  const [description, setDescription] = useState("");
-  const [rules, setRules] = useState("");
-  const [error, setError] = useState("");
+  const initStart = initialData ? splitDateTime(initialData.startDateTime) : null;
+  const initEnd   = initialData ? splitDateTime(initialData.endDateTime)   : null;
+
+  const [title, setTitle]             = useState(initialData?.title ?? "");
+  const [sport, setSport]             = useState(initialData?.sport ?? "");
+  const [eventType, setEventType]     = useState(initialData?.eventType ?? "");
+  const [location, setLocation]       = useState(initialData?.location ?? "");
+  const [startDate, setStartDate]     = useState(initStart?.date ?? "");
+  const [startTime, setStartTime]     = useState(initStart?.time ?? "");
+  const [endDate, setEndDate]         = useState(initEnd?.date ?? "");
+  const [endTime, setEndTime]         = useState(initEnd?.time ?? "");
+  const [registrationMode, setRegistrationMode] = useState<"individual" | "team">(
+    (initialData?.registrationMode as "individual" | "team") ?? "individual"
+  );
+  const [capacity, setCapacity]           = useState(initialData?.capacity ? String(initialData.capacity) : "");
+  const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(
+    initialData?.maxPlayersPerTeam ? String(initialData.maxPlayersPerTeam) : ""
+  );
+  const [description, setDescription] = useState(initialData?.description ?? "");
+  const [rules, setRules]             = useState(initialData?.rules ?? "");
+  const [error, setError]             = useState("");
 
   // Pricing
-  const [isPaid, setIsPaid] = useState(false);
-  const [priceAmount, setPriceAmount] = useState("");
+  const [isPaid, setIsPaid]           = useState((initialData?.price ?? 0) > 0);
+  const [priceAmount, setPriceAmount] = useState(
+    initialData?.price && initialData.price > 0 ? String(initialData.price / 100) : ""
+  );
+
+  // Agenda
+  const [agendaItems, setAgendaItems] = useState<AgendaItemDraft[]>(
+    initialData?.agendaItems?.map(a => ({
+      id: crypto.randomUUID(),
+      title: a.title,
+      date: a.date ?? "",
+      startTime: a.startTime,
+      endTime: a.endTime,
+      description: a.description ?? "",
+    })) ?? []
+  );
 
   // Custom form
-  const [customFormEnabled, setCustomFormEnabled] = useState(false);
-  const [formFields, setFormFields] = useState<FormFieldDraft[]>([]);
+  const [customFormEnabled, setCustomFormEnabled] = useState(initialData?.customFormEnabled ?? false);
+  const [formFields, setFormFields] = useState<FormFieldDraft[]>(
+    initialFormFields?.map(f => ({
+      id: f.id,
+      label: f.label,
+      fieldType: f.fieldType,
+      required: f.required,
+      options: f.options,
+    })) ?? []
+  );
 
   // Cover image
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile]         = useState<File | null>(null);
+  const [coverPreview, setCoverPreview]   = useState<string | null>(null);
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(initialData?.coverImageUrl ?? null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Gallery
-  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryFiles, setGalleryFiles]       = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [existingGalleryItems, setExistingGalleryItems] = useState<GalleryItem[]>(
+    initialData?.galleryItems ?? []
+  );
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingCover, setUploadingCover]     = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
-  const { startUpload: uploadCover } = useUploadThing("eventCover");
+  const { startUpload: uploadCover }   = useUploadThing("eventCover");
   const { startUpload: uploadGallery } = useUploadThing("eventGallery");
 
   function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -282,7 +446,7 @@ export default function CreateEventForm({
 
   function handleGalleryChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
-    const combined = [...galleryFiles, ...files].slice(0, 10);
+    const combined = [...galleryFiles, ...files].slice(0, 10 - existingGalleryItems.length);
     setGalleryFiles(combined);
     setGalleryPreviews(combined.map(f => URL.createObjectURL(f)));
   }
@@ -291,6 +455,10 @@ export default function CreateEventForm({
     const updated = galleryFiles.filter((_, i) => i !== index);
     setGalleryFiles(updated);
     setGalleryPreviews(updated.map(f => URL.createObjectURL(f)));
+  }
+
+  function removeExistingGalleryItem(index: number) {
+    setExistingGalleryItems(prev => prev.filter((_, i) => i !== index));
   }
 
   function addFormField() {
@@ -306,6 +474,21 @@ export default function CreateEventForm({
 
   function removeFormField(id: string) {
     setFormFields(prev => prev.filter(f => f.id !== id));
+  }
+
+  function addAgendaItem() {
+    setAgendaItems(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), title: "", date: "", startTime: "", endTime: "", description: "" },
+    ]);
+  }
+
+  function updateAgendaItem(id: string, updates: Partial<AgendaItemDraft>) {
+    setAgendaItems(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+  }
+
+  function removeAgendaItem(id: string) {
+    setAgendaItems(prev => prev.filter(a => a.id !== id));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -333,6 +516,7 @@ export default function CreateEventForm({
     }
     setError("");
 
+    // Upload cover if new file selected; otherwise keep existing URL
     let coverImageUrl: string | undefined;
     if (coverFile) {
       setUploadingCover(true);
@@ -341,14 +525,17 @@ export default function CreateEventForm({
         coverImageUrl = res?.[0]?.ufsUrl ?? res?.[0]?.url;
       } catch { setError(t("uploadError")); setUploadingCover(false); return; }
       setUploadingCover(false);
+    } else if (existingCoverUrl) {
+      coverImageUrl = existingCoverUrl;
     }
 
-    let galleryItems: { url: string; type: "image" | "video" }[] = [];
+    // Upload new gallery files; keep existing items
+    let newGalleryItems: GalleryItem[] = [];
     if (galleryFiles.length > 0) {
       setUploadingGallery(true);
       try {
         const res = await uploadGallery(galleryFiles);
-        galleryItems = (res ?? []).map((r, i) => ({
+        newGalleryItems = (res ?? []).map((r, i) => ({
           url: r.ufsUrl ?? r.url,
           type: (galleryFiles[i]?.type ?? "").startsWith("video") ? "video" : "image",
         }));
@@ -356,44 +543,65 @@ export default function CreateEventForm({
       setUploadingGallery(false);
     }
 
+    const allGalleryItems: GalleryItem[] = [...existingGalleryItems, ...newGalleryItems];
+
+    const eventData = {
+      title, sport, eventType, location,
+      startDateTime: `${startDate}T${startTime}`,
+      endDateTime: `${endDate}T${endTime}`,
+      coverImageUrl,
+      galleryItems: allGalleryItems,
+      agendaItems: agendaItems.filter(a => a.title.trim()).map(a => ({
+        title: a.title.trim(),
+        date: a.date || undefined,
+        startTime: a.startTime,
+        endTime: a.endTime,
+        description: a.description.trim() || undefined,
+      } satisfies AgendaItem)),
+      registrationMode,
+      capacity: capacity ? parseInt(capacity) : undefined,
+      maxPlayersPerTeam: registrationMode === "team" && maxPlayersPerTeam ? parseInt(maxPlayersPerTeam) : undefined,
+      description: description || undefined,
+      rules: rules || undefined,
+      price: isPaid && priceAmount ? Math.round(parseFloat(priceAmount) * 100) : 0,
+      customFormEnabled,
+      formFields: customFormEnabled
+        ? formFields.map((f, i) => ({
+            label: f.label.trim(),
+            fieldType: f.fieldType,
+            required: f.required,
+            options: f.options.filter(o => o.trim()),
+            order: i,
+          }))
+        : undefined,
+    };
+
     startTransition(async () => {
       try {
-        await createEvent({
-          title, sport, eventType, location,
-          startDateTime: `${startDate}T${startTime}`,
-          endDateTime: `${endDate}T${endTime}`,
-          coverImageUrl,
-          galleryItems,
-          registrationMode,
-          capacity: capacity ? parseInt(capacity) : undefined,
-          maxPlayersPerTeam: registrationMode === "team" && maxPlayersPerTeam ? parseInt(maxPlayersPerTeam) : undefined,
-          description: description || undefined,
-          rules: rules || undefined,
-          price: isPaid && priceAmount ? Math.round(parseFloat(priceAmount) * 100) : 0,
-          customFormEnabled,
-          formFields: customFormEnabled
-            ? formFields.map((f, i) => ({
-                label: f.label.trim(),
-                fieldType: f.fieldType,
-                required: f.required,
-                options: f.options.filter(o => o.trim()),
-                order: i,
-              }))
-            : undefined,
-        });
-        if (onSuccess) {
-          onSuccess();
+        if (isEditMode && eventId) {
+          await updateEvent(eventId, eventData);
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            router.push(`/events/${eventId}` as Parameters<typeof router.push>[0]);
+          }
         } else {
-          router.push({ pathname: "/events", query: { created: "event" } });
+          await createEvent(eventData);
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            router.push({ pathname: "/events", query: { created: "event" } });
+          }
         }
       } catch {
-        setError(t("createError"));
+        setError(isEditMode ? t("editError") : t("createError"));
       }
     });
   }
 
   const busy = uploadingCover || uploadingGallery || isPending;
   const inputClass = "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-red-200 placeholder:text-zinc-400 text-zinc-800";
+  const totalGalleryCount = existingGalleryItems.length + galleryFiles.length;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -449,12 +657,12 @@ export default function CreateEventForm({
           <div
             onClick={() => coverInputRef.current?.click()}
             className={`relative cursor-pointer rounded-xl overflow-hidden border-2 border-dashed transition-colors ${
-              coverPreview ? "border-transparent" : "border-zinc-200 hover:border-zinc-400"
+              (coverPreview ?? existingCoverUrl) ? "border-transparent" : "border-zinc-200 hover:border-zinc-400"
             }`}
           >
-            {coverPreview ? (
+            {(coverPreview ?? existingCoverUrl) ? (
               <div className="relative h-48">
-                <Image src={coverPreview} alt="Cover" fill className="object-cover" />
+                <Image src={(coverPreview ?? existingCoverUrl)!} alt="Cover" fill className="object-cover" />
                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                   <span className="text-white text-sm font-semibold">{t("changeCover")}</span>
                 </div>
@@ -469,16 +677,47 @@ export default function CreateEventForm({
               </div>
             )}
           </div>
+          {(coverPreview || existingCoverUrl) && (
+            <button
+              type="button"
+              onClick={() => { setCoverFile(null); setCoverPreview(null); setExistingCoverUrl(null); }}
+              className="self-start text-xs text-zinc-400 hover:text-zinc-600 underline mt-1"
+            >
+              {t("removeCover")}
+            </button>
+          )}
           <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
         </Field>
 
         {/* Gallery */}
         <Field label={t("galleryLabel")}>
           <div className="flex flex-col gap-3">
-            {galleryPreviews.length > 0 && (
+            {totalGalleryCount > 0 && (
               <div className="grid grid-cols-5 gap-2">
+                {/* Existing gallery items */}
+                {existingGalleryItems.map((item, i) => (
+                  <div key={`ex-${i}`} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
+                    {item.type === "video" ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" className="opacity-60">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <img src={item.url} alt={`Gallery ${i}`} className="absolute inset-0 w-full h-full object-cover" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeExistingGalleryItem(i)}
+                      className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                ))}
+                {/* New file previews */}
                 {galleryPreviews.map((src, i) => (
-                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden group">
+                  <div key={`new-${i}`} className="relative aspect-square rounded-lg overflow-hidden group">
                     <Image src={src} alt={`Gallery ${i}`} fill className="object-cover" />
                     <button
                       type="button"
@@ -489,7 +728,7 @@ export default function CreateEventForm({
                     </button>
                   </div>
                 ))}
-                {galleryFiles.length < 10 && (
+                {totalGalleryCount < 10 && (
                   <button
                     type="button"
                     onClick={() => galleryInputRef.current?.click()}
@@ -500,7 +739,7 @@ export default function CreateEventForm({
                 )}
               </div>
             )}
-            {galleryPreviews.length === 0 && (
+            {totalGalleryCount === 0 && (
               <div
                 onClick={() => galleryInputRef.current?.click()}
                 className="cursor-pointer border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl p-6 text-center transition-colors"
@@ -638,6 +877,37 @@ export default function CreateEventForm({
         )}
       </Section>
 
+      {/* Agenda */}
+      <Section title={t("sectionAgenda")}>
+        <div className="flex flex-col gap-3">
+          {agendaItems.map((item, index) => (
+            <AgendaItemBuilder
+              key={item.id}
+              item={item}
+              index={index}
+              t={t}
+              inputClass={inputClass}
+              onChange={updates => updateAgendaItem(item.id, updates)}
+              onRemove={() => removeAgendaItem(item.id)}
+              eventStartDate={startDate}
+              eventStartTime={startTime}
+              eventEndDate={endDate}
+              eventEndTime={endTime}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={addAgendaItem}
+            className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-zinc-200 hover:border-[#e21d12] hover:text-[#e21d12] text-zinc-400 text-sm font-semibold transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            {t("agendaAdd")}
+          </button>
+        </div>
+      </Section>
+
       {/* Description & Rules */}
       <Section title={t("sectionDetails")}>
         <Field label={t("descriptionLabel")}>
@@ -676,7 +946,10 @@ export default function CreateEventForm({
           type="submit" disabled={busy}
           className="flex-1 py-3 text-sm font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] disabled:opacity-60 transition-colors shadow-sm"
         >
-          {busy ? t("creating") : t("submit")}
+          {busy
+            ? (isEditMode ? t("saving") : t("creating"))
+            : (isEditMode ? t("saveChanges") : t("submit"))
+          }
         </button>
       </div>
 

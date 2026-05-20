@@ -27,6 +27,7 @@ async function ensureFormTables() {
   formTablesReady ??= (async () => {
     await pool.query(`ALTER TABLE "event" ADD COLUMN IF NOT EXISTS "customFormEnabled" boolean NOT NULL DEFAULT false`);
     await pool.query(`ALTER TABLE "event" ADD COLUMN IF NOT EXISTS "galleryItems" JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    await pool.query(`ALTER TABLE "event" ADD COLUMN IF NOT EXISTS "agendaItems" JSONB NOT NULL DEFAULT '[]'::jsonb`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "event_form_field" (
         "id"        text PRIMARY KEY,
@@ -54,6 +55,7 @@ async function ensureFormTables() {
 }
 
 export type GalleryItem = { url: string; type: "image" | "video" };
+export type AgendaItem = { title: string; date?: string; startTime: string; endTime: string; description?: string };
 
 export type FormFieldType = 'text' | 'number' | 'dropdown' | 'checkbox' | 'file';
 
@@ -83,6 +85,7 @@ type EventRow = {
   coverImageUrl: string | null;
   galleryUrls: string[] | null;
   galleryItems: GalleryItem[] | null;
+  agendaItems: AgendaItem[] | null;
   registrationMode: string;
   capacity: number | null;
   maxPlayersPerTeam: number | null;
@@ -110,6 +113,7 @@ function serializeEvent(row: EventRow) {
     updatedAt: new Date(row.updatedAt).toISOString(),
     galleryUrls: row.galleryUrls ?? [],
     galleryItems,
+    agendaItems: (row.agendaItems ?? []) as AgendaItem[],
     participantCount: Number(row.participantCount ?? 0),
     customFormEnabled: row.customFormEnabled ?? false,
     price: Number(row.price ?? 0),
@@ -134,6 +138,7 @@ export async function createEvent(data: {
   endDateTime: string;
   coverImageUrl?: string;
   galleryItems?: GalleryItem[];
+  agendaItems?: AgendaItem[];
   registrationMode: string;
   capacity?: number;
   maxPlayersPerTeam?: number;
@@ -156,6 +161,7 @@ export async function createEvent(data: {
 
   const galleryItems = data.galleryItems ?? [];
   const galleryUrls = galleryItems.map(i => i.url);
+  const agendaItems = data.agendaItems ?? [];
 
   const id = crypto.randomUUID();
   await pool.query(
@@ -163,8 +169,8 @@ export async function createEvent(data: {
        id, title, sport, "eventType", location,
        "startDateTime", "endDateTime", "coverImageUrl", "galleryUrls", "galleryItems",
        "registrationMode", capacity, "maxPlayersPerTeam",
-       description, rules, "organizerId", "customFormEnabled", price, "createdAt", "updatedAt"
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW(),NOW())`,
+       description, rules, "organizerId", "customFormEnabled", price, "agendaItems", "createdAt", "updatedAt"
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb,NOW(),NOW())`,
     [
       id, data.title, data.sport, data.eventType, data.location,
       data.startDateTime, data.endDateTime, data.coverImageUrl ?? null,
@@ -172,6 +178,7 @@ export async function createEvent(data: {
       data.registrationMode, data.capacity ?? null, data.maxPlayersPerTeam ?? null,
       data.description ?? null, data.rules ?? null, session.user.id,
       data.customFormEnabled ?? false, data.price ?? 0,
+      JSON.stringify(agendaItems),
     ]
   );
 
@@ -396,6 +403,83 @@ export async function leaveEvent(eventId: string) {
     [eventId, session.user.id]
   );
 
+  revalidatePath("/events");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/events");
+}
+
+export async function updateEvent(eventId: string, data: {
+  title: string;
+  sport: string;
+  eventType: string;
+  location: string;
+  startDateTime: string;
+  endDateTime: string;
+  coverImageUrl?: string;
+  galleryItems?: GalleryItem[];
+  agendaItems?: AgendaItem[];
+  registrationMode: string;
+  capacity?: number;
+  maxPlayersPerTeam?: number;
+  description?: string;
+  rules?: string;
+  customFormEnabled?: boolean;
+  price?: number;
+  formFields?: Array<{
+    label: string;
+    fieldType: string;
+    required: boolean;
+    options: string[];
+    order: number;
+  }>;
+}) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("Unauthorized");
+
+  await ensureFormTables();
+
+  const existing = await pool.query(`SELECT "organizerId" FROM "event" WHERE id = $1`, [eventId]);
+  if (!existing.rows[0]) throw new Error("Event not found");
+  if (existing.rows[0].organizerId !== session.user.id) throw new Error("Forbidden");
+
+  const galleryItems = data.galleryItems ?? [];
+  const galleryUrls = galleryItems.map(i => i.url);
+  const agendaItems = data.agendaItems ?? [];
+
+  await pool.query(
+    `UPDATE "event" SET
+      title=$1, sport=$2, "eventType"=$3, location=$4,
+      "startDateTime"=$5, "endDateTime"=$6, "coverImageUrl"=$7,
+      "galleryUrls"=$8, "galleryItems"=$9::jsonb,
+      "registrationMode"=$10, capacity=$11, "maxPlayersPerTeam"=$12,
+      description=$13, rules=$14, "customFormEnabled"=$15, price=$16,
+      "agendaItems"=$17::jsonb,
+      "updatedAt"=NOW()
+    WHERE id=$18`,
+    [
+      data.title, data.sport, data.eventType, data.location,
+      data.startDateTime, data.endDateTime, data.coverImageUrl ?? null,
+      galleryUrls, JSON.stringify(galleryItems),
+      data.registrationMode, data.capacity ?? null, data.maxPlayersPerTeam ?? null,
+      data.description ?? null, data.rules ?? null,
+      data.customFormEnabled ?? false, data.price ?? 0,
+      JSON.stringify(agendaItems),
+      eventId,
+    ]
+  );
+
+  await pool.query(`DELETE FROM "event_form_field" WHERE "eventId" = $1`, [eventId]);
+  if (data.customFormEnabled && data.formFields?.length) {
+    for (const field of data.formFields) {
+      await pool.query(
+        `INSERT INTO "event_form_field" (id, "eventId", label, "fieldType", required, options, "order")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [crypto.randomUUID(), eventId, field.label, field.fieldType, field.required, field.options, field.order]
+      );
+    }
+  }
+
+  revalidatePath(`/events/${eventId}`);
   revalidatePath("/events");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/events");

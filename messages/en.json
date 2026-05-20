@@ -190,6 +190,7 @@
     "tabParticipants": "Participants",
     "tabGallery": "Gallery",
     "startDate": "Start Date",
+    "endDate": "End Date",
     "duration": "Duration",
     "teams": "Teams",
     "spectators": "Spectators",
@@ -215,7 +216,10 @@
     "registrationFileReady": "File uploaded successfully",
     "paymentSuccess": "Payment confirmed! You've been registered for this event.",
     "payToJoin": "Pay",
-    "removeParticipant": "Remove"
+    "removeParticipant": "Remove",
+    "editEvent": "Edit Event",
+    "noAgenda": "No agenda yet",
+    "noAgendaHint": "The organizer will add the schedule here."
   },
   "CreateTeam": {
     "title": "Create a Team",
@@ -315,7 +319,23 @@
     "priceLabel": "Entry Fee (CAD)",
     "pricePlaceholder": "e.g. 10.00",
     "priceHint": "Participants will be charged this amount to join.",
-    "priceRequired": "Please enter a valid entry fee for paid events."
+    "priceRequired": "Please enter a valid entry fee for paid events.",
+    "editTitle": "Edit Event",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "editError": "Failed to save changes. Please try again.",
+    "removeCover": "Remove cover",
+    "sectionAgenda": "Event Agenda",
+    "agendaAdd": "Add Agenda Item",
+    "agendaItem": "Item",
+    "agendaItemTitle": "Activity",
+    "agendaItemTitlePlaceholder": "e.g. 3pt Contest",
+    "agendaItemDate": "Date",
+    "agendaItemStart": "Start Time",
+    "agendaItemEnd": "End Time",
+    "agendaItemDescription": "Notes (Optional)",
+    "agendaItemDescriptionPlaceholder": "Any details about this activity...",
+    "agendaItemRemove": "Remove"
   },
   "DashboardProfile": {
     "eyebrow": "Profile",
