@@ -438,9 +438,13 @@ export async function updateEvent(eventId: string, data: {
 
   await ensureFormTables();
 
-  const existing = await pool.query(`SELECT "organizerId" FROM "event" WHERE id = $1`, [eventId]);
+  const [existing, roleRow] = await Promise.all([
+    pool.query(`SELECT "organizerId" FROM "event" WHERE id = $1`, [eventId]),
+    pool.query(`SELECT role FROM "user" WHERE id = $1`, [session.user.id]),
+  ]);
   if (!existing.rows[0]) throw new Error("Event not found");
-  if (existing.rows[0].organizerId !== session.user.id) throw new Error("Forbidden");
+  const isSuperAdmin = roleRow.rows[0]?.role === "super_admin";
+  if (existing.rows[0].organizerId !== session.user.id && !isSuperAdmin) throw new Error("Forbidden");
 
   const galleryItems = data.galleryItems ?? [];
   const galleryUrls = galleryItems.map(i => i.url);

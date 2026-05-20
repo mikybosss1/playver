@@ -110,17 +110,17 @@ export default async function EventDetailsPage({
 
                 <div className="mt-6 flex flex-col gap-2">
                   {isOrganizer && (
-                    <>
-                      <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
-                        {t("yourEvent")}
-                      </span>
-                      <Link
-                        href={`/events/${event.id}/edit`}
-                        className="block rounded-lg border border-zinc-200 px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
-                      >
-                        {t("editEvent")}
-                      </Link>
-                    </>
+                    <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
+                      {t("yourEvent")}
+                    </span>
+                  )}
+                  {(isOrganizer || isSuperAdmin) && (
+                    <Link
+                      href={`/events/${event.id}/edit`}
+                      className="block rounded-lg border border-zinc-200 px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      {t("editEvent")}
+                    </Link>
                   )}
                   {session && (
                     <EventJoinButton
