@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import CreateEventForm from "@/components/CreateEventForm";
 import { auth } from "@/lib/auth";
 import { getEventById, getEventFormFields } from "@/app/actions/event";
+import { getUserRole } from "@/app/actions/admin";
 
 export default async function EditEventPage({
   params,
@@ -21,9 +22,12 @@ export default async function EditEventPage({
 
   if (!session) notFound();
 
-  const event = await getEventById(eventId);
+  const [event, userRole] = await Promise.all([
+    getEventById(eventId),
+    getUserRole(session.user.id),
+  ]);
   if (!event) notFound();
-  if (event.organizerId !== session.user.id) notFound();
+  if (event.organizerId !== session.user.id && userRole !== "super_admin") notFound();
 
   const formFields = event.customFormEnabled ? await getEventFormFields(eventId) : [];
 
