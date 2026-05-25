@@ -9,11 +9,11 @@ import { adminRemoveParticipant } from "@/app/actions/admin";
 type TabKey = "details" | "agenda" | "results" | "participants" | "gallery";
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value));
 }
 
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(new Date(value));
 }
 
 function formatTimeStr(hhmm: string) {
@@ -293,7 +293,7 @@ export default function EventDetailsTabs({
                   <div className="border-zinc-100 text-center md:border-r flex flex-col items-center justify-center gap-1">
                     {item.date && (
                       <p className="text-sm font-bold text-zinc-500 uppercase tracking-wide">
-                        {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(`${item.date}T12:00:00`))}
+                        {new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${item.date}T00:00:00Z`))}
                       </p>
                     )}
                     {item.startTime && <p className="text-xl font-extrabold text-[#b72a25]">{formatTimeStr(item.startTime)}</p>}

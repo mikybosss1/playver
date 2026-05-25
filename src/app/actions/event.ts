@@ -505,10 +505,7 @@ export async function updateEvent(eventId: string, data: {
     }
   }
 
-  revalidatePath(`/events/${eventId}`);
-  revalidatePath("/events");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/events");
+  revalidatePath("/", "layout");
 }
 
 export async function getEventFormFields(eventId: string): Promise<FormField[]> {
