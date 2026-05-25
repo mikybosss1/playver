@@ -584,6 +584,7 @@ export default function CreateEventForm({
             onSuccess();
           } else {
             router.push(`/events/${eventId}` as Parameters<typeof router.push>[0]);
+            router.refresh();
           }
         } else {
           await createEvent(eventData);
