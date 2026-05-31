@@ -20,6 +20,17 @@ const IconTeams = () => (
   </svg>
 );
 
+const IconTournaments = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+    <path d="M4 22h16" />
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+    <path d="M18 2H6v7a6 6 0 0 0 12 0V2z" />
+  </svg>
+);
+
 const IconEvents = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -83,6 +94,7 @@ export default function DashboardSidebar({
     { href: "/dashboard" as const, label: t("navOverview"), icon: <IconOverview /> },
     { href: "/dashboard/profile" as const, label: t("navProfile"), icon: <IconProfile /> },
     { href: "/dashboard/teams" as const, label: t("navTeams"), icon: <IconTeams /> },
+    { href: "/dashboard/tournaments" as const, label: t("navTournaments"), icon: <IconTournaments /> },
     { href: "/dashboard/events" as const, label: t("navEvents"), icon: <IconEvents /> },
     { href: "/dashboard/wallet" as const, label: t("navWallet"), icon: <IconWallet /> },
     { href: "/dashboard/settings" as const, label: t("navSettings"), icon: <IconSettings /> },
@@ -91,65 +103,92 @@ export default function DashboardSidebar({
       : []),
   ];
 
+  // Bottom nav shows the 5 most-used items (wallet/settings/roles accessible via desktop)
+  const mobileNavItems = [
+    { href: "/dashboard" as const, label: t("navOverview"), icon: <IconOverview /> },
+    { href: "/dashboard/teams" as const, label: t("navTeams"), icon: <IconTeams /> },
+    { href: "/dashboard/tournaments" as const, label: t("navTournaments"), icon: <IconTournaments /> },
+    { href: "/dashboard/events" as const, label: t("navEvents"), icon: <IconEvents /> },
+    { href: "/dashboard/profile" as const, label: t("navProfile"), icon: <IconProfile /> },
+  ];
+
   async function handleSignOut() {
     await signOut();
     router.push("/auth/signin");
   }
 
-  return (
-    <aside className="w-60 shrink-0 bg-white border-r border-zinc-200 flex flex-col sticky top-16 h-[calc(100vh-4rem)]">
+  function isActive(href: string) {
+    return href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+  }
 
-      {/* User info */}
-      <div className="px-4 py-5 border-b border-zinc-100">
-        <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-full bg-[#e21d12] flex items-center justify-center text-white text-sm font-bold shrink-0">
-            {initial}
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-zinc-900 truncate">{user.name}</p>
-            <p className="text-xs text-zinc-400 truncate">{user.email}</p>
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-60 shrink-0 bg-white border-r border-zinc-200 flex-col sticky top-16 h-[calc(100vh-4rem)]">
+
+        {/* User info */}
+        <div className="px-4 py-5 border-b border-zinc-100">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-full bg-[#e21d12] flex items-center justify-center text-white text-sm font-bold shrink-0">
+              {initial}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-zinc-900 truncate">{user.name}</p>
+              <p className="text-xs text-zinc-400 truncate">{user.email}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-        {navItems.map(({ href, label, icon }) => {
-          const isActive =
-            href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(href);
-
-          return (
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+          {navItems.map(({ href, label, icon }) => (
             <Link
               key={href}
               href={href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
+                isActive(href)
                   ? "bg-red-50 text-[#e21d12]"
                   : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
               }`}
             >
-              <span className={isActive ? "text-[#e21d12]" : "text-zinc-400"}>
+              <span className={isActive(href) ? "text-[#e21d12]" : "text-zinc-400"}>
                 {icon}
               </span>
               {label}
             </Link>
-          );
-        })}
+          ))}
+        </nav>
+
+        {/* Sign out */}
+        <div className="px-3 pb-4 border-t border-zinc-100 pt-3">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 transition-colors"
+          >
+            <span className="text-zinc-400"><IconSignOut /></span>
+            {t("signOut")}
+          </button>
+        </div>
+
+      </aside>
+
+      {/* Mobile bottom navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-zinc-200">
+        <div className="flex items-stretch h-16">
+          {mobileNavItems.map(({ href, label, icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition-colors ${
+                isActive(href) ? "text-[#e21d12]" : "text-zinc-400"
+              }`}
+            >
+              {icon}
+              <span className="text-[10px] font-semibold leading-none">{label}</span>
+            </Link>
+          ))}
+        </div>
       </nav>
-
-      {/* Sign out */}
-      <div className="px-3 pb-4 border-t border-zinc-100 pt-3">
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 transition-colors"
-        >
-          <span className="text-zinc-400"><IconSignOut /></span>
-          {t("signOut")}
-        </button>
-      </div>
-
-    </aside>
+    </>
   );
 }

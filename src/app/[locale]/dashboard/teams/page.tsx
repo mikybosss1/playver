@@ -57,7 +57,7 @@ export default async function DashboardTeamsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
         <div>
           <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-1">
             {t("eyebrow")}

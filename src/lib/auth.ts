@@ -2,12 +2,18 @@ import { betterAuth } from "better-auth";
 import { Pool } from "@neondatabase/serverless";
 import { sendWelcomeEmail } from "@/lib/emails";
 
+const appURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: appURL,
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins: [
-    process.env.BETTER_AUTH_URL,
+    appURL,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    "https://playver.ca",
+    "https://www.playver.ca",
+    "http://localhost:3000",
+    "http://localhost:3001",
   ].filter((v): v is string => Boolean(v)),
   database: new Pool({ connectionString: process.env.DATABASE_URL }),
   emailAndPassword: {

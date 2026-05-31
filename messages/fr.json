@@ -1,6 +1,7 @@
 {
   "Navbar": {
     "search": "Rechercher des matchs, équipes ou joueurs...",
+    "tournaments": "Tournois",
     "discover": "Événements",
     "teams": "Équipes",
     "requestFeature": "Demander une fonctionnalité",
@@ -408,6 +409,7 @@
     "navOverview": "Vue d'ensemble",
     "navProfile": "Profil",
     "navTeams": "Équipes",
+    "navTournaments": "Tournois",
     "navEvents": "Événements",
     "navWallet": "Portefeuille",
     "navSettings": "Paramètres",

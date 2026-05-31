@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   if (!event.price) return NextResponse.json({ error: "Event is free" }, { status: 400 });
   if (new Date(event.endDateTime) < new Date()) return NextResponse.json({ error: "Event has ended" }, { status: 400 });
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
   const checkoutSession = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
