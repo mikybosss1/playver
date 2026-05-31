@@ -32,7 +32,7 @@ export default async function DashboardLayout({
       <Navbar />
       <div className="flex flex-1 min-h-[calc(100vh-4rem)]">
         <DashboardSidebar user={user} />
-        <main className="flex-1 bg-zinc-50 overflow-auto">
+        <main className="flex-1 bg-zinc-50 overflow-auto pb-16 md:pb-0">
           {children}
         </main>
       </div>

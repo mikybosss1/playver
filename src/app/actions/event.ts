@@ -18,14 +18,21 @@ async function ensureEventParticipantsTable() {
         "joinedAt"  timestamp NOT NULL DEFAULT NOW()
       )`
     );
+    // Drop the old bad single-column constraint if it still exists (one-time migration)
     await pool.query(`
       ALTER TABLE "event_participant"
-        DROP CONSTRAINT IF EXISTS "event_participant_eventId_key",
-        DROP CONSTRAINT IF EXISTS "event_participant_eventId_userId_key";
+        DROP CONSTRAINT IF EXISTS "event_participant_eventId_key";
     `);
+    // Add the correct composite constraint idempotently — safe across concurrent serverless instances
     await pool.query(`
-      ALTER TABLE "event_participant"
-        ADD CONSTRAINT "event_participant_eventId_userId_key" UNIQUE ("eventId", "userId");
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'event_participant_eventId_userId_key'
+        ) THEN
+          ALTER TABLE "event_participant"
+            ADD CONSTRAINT "event_participant_eventId_userId_key" UNIQUE ("eventId", "userId");
+        END IF;
+      END $$;
     `);
   })();
   await eventParticipantsTablePromise;
@@ -216,7 +223,68 @@ export async function getEvents() {
      JOIN "user" u ON e."organizerId" = u.id
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
      GROUP BY e.id, u.name
-     ORDER BY COUNT(ep.id) DESC, e."createdAt" DESC`
+     ORDER BY
+       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
+       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`
+  );
+  return result.rows.map(serializeEvent);
+}
+
+export async function getTournamentEvents() {
+  await ensureEventParticipantsTable();
+  const result = await pool.query(
+    `SELECT e.*, u.name as "organizerName", COUNT(ep.id) as "participantCount"
+     FROM "event" e
+     JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
+     WHERE e."eventType" = 'Tournament'
+     GROUP BY e.id, u.name
+     ORDER BY
+       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
+       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`
+  );
+  return result.rows.map(serializeEvent);
+}
+
+export async function getMyTournaments() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return [];
+  await ensureEventParticipantsTable();
+  const result = await pool.query(
+    `SELECT e.*, u.name as "organizerName", COUNT(ep.id) as "participantCount"
+     FROM "event" e
+     JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
+     WHERE e."organizerId" = $1 AND e."eventType" = 'Tournament'
+     GROUP BY e.id, u.name
+     ORDER BY
+       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
+       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
+    [session.user.id]
+  );
+  return result.rows.map(serializeEvent);
+}
+
+export async function getJoinedTournaments() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return [];
+  await ensureEventParticipantsTable();
+  const result = await pool.query(
+    `SELECT e.*, u.name as "organizerName", COUNT(all_ep.id) as "participantCount"
+     FROM "event" e
+     JOIN "user" u ON e."organizerId" = u.id
+     JOIN "event_participant" ep ON ep."eventId" = e.id
+     LEFT JOIN "event_participant" all_ep ON all_ep."eventId" = e.id
+     WHERE ep."userId" = $1 AND e."organizerId" <> $1 AND e."eventType" = 'Tournament'
+     GROUP BY e.id, u.name, ep."joinedAt"
+     ORDER BY
+       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
+       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
+    [session.user.id]
   );
   return result.rows.map(serializeEvent);
 }
@@ -247,7 +315,10 @@ export async function getMyEvents() {
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
      WHERE e."organizerId" = $1
      GROUP BY e.id, u.name
-     ORDER BY e."startDateTime" ASC`,
+     ORDER BY
+       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
+       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
     [session.user.id]
   );
   return result.rows.map(serializeEvent);
@@ -266,7 +337,10 @@ export async function getJoinedEvents() {
      LEFT JOIN "event_participant" all_ep ON all_ep."eventId" = e.id
      WHERE ep."userId" = $1 AND e."organizerId" <> $1
      GROUP BY e.id, u.name, ep."joinedAt"
-     ORDER BY ep."joinedAt" DESC`,
+     ORDER BY
+       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
+       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
     [session.user.id]
   );
   return result.rows.map(serializeEvent);

@@ -152,7 +152,7 @@ function FormFieldBuilder({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-zinc-600">{t("customFormTypeLabel")}</label>
           <select
@@ -311,7 +311,7 @@ function AgendaItemBuilder({
           className={inputClass}
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-zinc-600">{t("agendaItemStart")}</label>
           <TimeSelect
@@ -612,7 +612,7 @@ export default function CreateEventForm({
         <Field label={t("titleLabel")} required>
           <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t("titlePlaceholder")} className={inputClass} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={t("sportLabel")} required>
             <select value={sport} onChange={e => setSport(e.target.value)} className={inputClass}>
               <option value="">{t("selectSport")}</option>
@@ -629,7 +629,7 @@ export default function CreateEventForm({
         <Field label={t("locationLabel")} required>
           <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder={t("locationPlaceholder")} className={inputClass} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={t("startDateLabel")} required>
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={inputClass} />
           </Field>
@@ -637,7 +637,7 @@ export default function CreateEventForm({
             <TimeSelect value={startTime} onChange={setStartTime} className={`${inputClass} appearance-none`} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={t("endDateLabel")} required>
             <input type="date" value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} className={inputClass} />
           </Field>
@@ -694,7 +694,7 @@ export default function CreateEventForm({
         <Field label={t("galleryLabel")}>
           <div className="flex flex-col gap-3">
             {totalGalleryCount > 0 && (
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                 {/* Existing gallery items */}
                 {existingGalleryItems.map((item, i) => (
                   <div key={`ex-${i}`} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">

@@ -22,10 +22,12 @@ function eventMatchesType(eventType: string, activeType: EventType) {
 
 export default function DiscoverSearch({
   events,
+  hideTypeFilter = false,
 }: {
   events: EventItem[];
   currentUserId: string | null;
   joinedEventIds: string[];
+  hideTypeFilter?: boolean;
 }) {
   const t = useTranslations("Discover");
 
@@ -125,22 +127,24 @@ export default function DiscoverSearch({
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {eventTypes.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveType(key)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
-                activeType === key
-                  ? "bg-[#e21d12] text-white border-[#e21d12]"
-                  : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {!hideTypeFilter && (
+          <div className="flex flex-wrap gap-2">
+            {eventTypes.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveType(key)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
+                  activeType === key
+                    ? "bg-[#e21d12] text-white border-[#e21d12]"
+                    : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative">

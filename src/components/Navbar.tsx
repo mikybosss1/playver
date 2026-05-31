@@ -1,23 +1,29 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
 import LanguageToggle from "./LanguageToggle";
 import { useSession } from "@/lib/auth-client";
 
-const navHrefs = ["/events", "/teams", "/request-a-feature"] as const;
+const navHrefs = ["/tournaments", "/events", "/teams", "/request-a-feature"] as const;
 
 export default function Navbar() {
   const t = useTranslations("Navbar");
   const pathname = usePathname();
   const { data: session } = useSession();
   const firstName = session?.user?.name?.split(" ")[0] ?? null;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close menu on route change
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   const navLinks = [
-    { href: navHrefs[0], label: t("discover") },
-    { href: navHrefs[1], label: t("teams") },
-    { href: navHrefs[2], label: t("requestFeature") },
+    { href: navHrefs[0], label: t("tournaments") },
+    { href: navHrefs[1], label: t("discover") },
+    { href: navHrefs[2], label: t("teams") },
+    { href: navHrefs[3], label: t("requestFeature") },
   ];
 
   return (
@@ -28,7 +34,7 @@ export default function Navbar() {
           <Image src="/logo.png" alt="Playver" width={100} height={40} priority className="object-contain" />
         </Link>
 
-        {/* Nav links */}
+        {/* Desktop nav links */}
         <nav className="hidden lg:flex items-center gap-7 ml-2">
           {navLinks.map(({ href, label }) => (
             <Link
@@ -49,25 +55,63 @@ export default function Navbar() {
           {firstName ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors"
+              className="flex items-center gap-2 pl-2 pr-2 sm:pr-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors"
             >
               <span className="w-7 h-7 rounded-full bg-[#e21d12] flex items-center justify-center text-white text-xs font-bold shrink-0">
                 {firstName[0].toUpperCase()}
               </span>
-              <span className="text-sm font-semibold text-zinc-800">{firstName}</span>
+              <span className="hidden sm:inline text-sm font-semibold text-zinc-800">{firstName}</span>
             </Link>
           ) : (
             <>
-              <Link href="/auth/signin" className="text-sm font-medium text-zinc-700 hover:text-[#e21d12] transition-colors">
+              <Link href="/auth/signin" className="text-sm font-medium text-zinc-700 hover:text-[#e21d12] transition-colors hidden sm:inline">
                 {t("login")}
               </Link>
-              <Link href="/auth/signup" className="px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors hover:bg-[#d41810] bg-[#e21d12]">
+              <Link href="/auth/signup" className="px-4 sm:px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors hover:bg-[#d41810] bg-[#e21d12]">
                 {t("signup")}
               </Link>
             </>
           )}
+
+          {/* Hamburger — mobile only */}
+          <button
+            className="lg:hidden flex flex-col justify-center items-center w-9 h-9 rounded-lg hover:bg-zinc-100 transition-colors gap-1.5"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+          >
+            <span className={`block w-5 h-0.5 bg-zinc-700 transition-all duration-200 ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
+            <span className={`block w-5 h-0.5 bg-zinc-700 transition-all duration-200 ${menuOpen ? "opacity-0" : ""}`} />
+            <span className={`block w-5 h-0.5 bg-zinc-700 transition-all duration-200 ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+          </button>
         </div>
       </div>
+
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <div className="lg:hidden bg-white border-t border-zinc-100 shadow-lg px-4 py-4 flex flex-col gap-1">
+          {navLinks.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`px-4 py-3 rounded-xl text-sm font-bold tracking-wide uppercase transition-colors ${
+                pathname === href
+                  ? "bg-[#e21d12]/10 text-[#e21d12]"
+                  : "text-zinc-700 hover:bg-zinc-50"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+          {!firstName && (
+            <Link
+              href="/auth/signin"
+              className="px-4 py-3 rounded-xl text-sm font-bold tracking-wide uppercase text-zinc-700 hover:bg-zinc-50 transition-colors sm:hidden"
+            >
+              {t("login")}
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   );
 }

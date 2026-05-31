@@ -65,7 +65,7 @@ export default async function EventDetailsPage({
           )}
 
           <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
-            <div className="relative h-[320px] overflow-hidden bg-zinc-100">
+            <div className="relative h-[200px] sm:h-[320px] overflow-hidden bg-zinc-100">
               {event.coverImageUrl ? (
                 <Image src={event.coverImageUrl} alt={event.title} fill priority className="object-cover" />
               ) : (

@@ -20,16 +20,21 @@ async function ensureTeamMembersTable() {
     ),
     pool.query(`ALTER TABLE "team" ADD COLUMN IF NOT EXISTS "coverImageUrl" text`),
   ]).then(async () => {
-    // Fix: drop the wrong single-column unique constraint if it exists,
-    // then ensure the correct (teamId, userId) pair constraint is in place.
+    // Drop the old bad single-column constraint if it still exists (one-time migration)
     await pool.query(`
       ALTER TABLE "team_member"
-        DROP CONSTRAINT IF EXISTS "team_member_teamId_key",
-        DROP CONSTRAINT IF EXISTS "team_member_teamId_userId_key";
+        DROP CONSTRAINT IF EXISTS "team_member_teamId_key";
     `);
+    // Add the correct composite constraint idempotently — safe across concurrent serverless instances
     await pool.query(`
-      ALTER TABLE "team_member"
-        ADD CONSTRAINT "team_member_teamId_userId_key" UNIQUE ("teamId", "userId");
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'team_member_teamId_userId_key'
+        ) THEN
+          ALTER TABLE "team_member"
+            ADD CONSTRAINT "team_member_teamId_userId_key" UNIQUE ("teamId", "userId");
+        END IF;
+      END $$;
     `);
   });
   await teamMembersTablePromise;
