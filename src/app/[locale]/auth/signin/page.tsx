@@ -3,8 +3,15 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SignInForm from "@/components/SignInForm";
 
-export default async function SignInPage() {
-  const t = await getTranslations("SignIn");
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const [t, { callbackUrl }] = await Promise.all([
+    getTranslations("SignIn"),
+    searchParams,
+  ]);
 
   return (
     <>
@@ -20,7 +27,7 @@ export default async function SignInPage() {
             </h1>
             <p className="text-zinc-500 text-sm mb-8">{t("subtitle")}</p>
 
-            <SignInForm />
+            <SignInForm callbackUrl={callbackUrl} />
           </div>
         </div>
       </main>

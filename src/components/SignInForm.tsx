@@ -5,9 +5,10 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { signIn } from "@/lib/auth-client";
 
-export default function SignInForm() {
+export default function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   const t = useTranslations("SignIn");
   const router = useRouter();
+  const destination = callbackUrl ?? "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,7 +20,7 @@ export default function SignInForm() {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
-    await signIn.social({ provider: "google", callbackURL: "/dashboard" });
+    await signIn.social({ provider: "google", callbackURL: destination });
     setGoogleLoading(false);
   }
 
@@ -32,7 +33,7 @@ export default function SignInForm() {
     if (result.error) {
       setError(result.error.message ?? "Sign in failed.");
     } else {
-      router.push("/dashboard");
+      router.push(destination);
     }
   }
 
@@ -143,7 +144,10 @@ export default function SignInForm() {
       {/* Sign up link */}
       <p className="text-center text-sm text-zinc-500">
         {t("noAccount")}{" "}
-        <Link href="/auth/signup" className="text-[#e21d12] font-semibold hover:underline">
+        <Link
+          href={callbackUrl ? `/auth/signup?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signup"}
+          className="text-[#e21d12] font-semibold hover:underline"
+        >
           {t("signUpLink")}
         </Link>
       </p>

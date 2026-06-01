@@ -65,6 +65,7 @@ export default async function TournamentsPage() {
               currentUserId={session?.user?.id ?? null}
               joinedEventIds={joinedEventIds}
               hideTypeFilter
+              linkTo="events"
             />
           )}
         </div>

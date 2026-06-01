@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { EventItem, EventParticipant, GalleryItem } from "@/app/actions/event";
+import type { TournamentTeam } from "@/app/actions/tournament";
 import { adminRemoveParticipant } from "@/app/actions/admin";
+import { JoinOpenTeamButton } from "@/components/TournamentCaptainPanel";
 
-type TabKey = "details" | "agenda" | "results" | "participants" | "gallery";
+type TabKey = "details" | "agenda" | "results" | "participants" | "gallery" | "teams";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value));
@@ -188,10 +190,20 @@ export default function EventDetailsTabs({
   event,
   participants: initialParticipants,
   isSuperAdmin = false,
+  hideTabs = [],
+  tournamentTeams,
+  myTournamentTeamId,
+  canRequestJoin = false,
+  tournamentId,
 }: {
   event: EventItem;
   participants: EventParticipant[];
   isSuperAdmin?: boolean;
+  hideTabs?: TabKey[];
+  tournamentTeams?: TournamentTeam[];
+  myTournamentTeamId?: string;
+  canRequestJoin?: boolean;
+  tournamentId?: string;
 }) {
   const t = useTranslations("EventDetails");
   const [activeTab, setActiveTab] = useState<TabKey>("details");
@@ -218,7 +230,6 @@ export default function EventDetailsTabs({
   }
   const capacity = event.capacity ?? 0;
   const end = new Date(event.endDateTime);
-  const duration = `${formatTime(event.startDateTime)} - ${formatTime(event.endDateTime)}`;
   const agendaItems = useMemo(() =>
     [...(event.agendaItems ?? [])].sort((a, b) => {
       const dateA = `${a.date ?? ""}${a.startTime ?? ""}`;
@@ -226,20 +237,24 @@ export default function EventDetailsTabs({
       return dateA.localeCompare(dateB);
     }),
   [event.agendaItems]);
-  const tabs: { key: TabKey; label: string }[] = [
-    { key: "details", label: t("tabDetails") },
-    { key: "agenda", label: t("tabAgenda") },
-    { key: "results", label: t("tabResults") },
-    { key: "participants", label: t("tabParticipants") },
-    { key: "gallery", label: t("tabGallery") },
-  ];
+  const tabs: { key: TabKey; label: string }[] = (
+    [
+      { key: "details", label: t("tabDetails") },
+      { key: "participants", label: t("tabParticipants") },
+      ...(tournamentTeams ? [{ key: "teams" as TabKey, label: t("tabTeams") }] : []),
+      { key: "agenda", label: t("tabAgenda") },
+      { key: "results", label: t("tabResults") },
+      { key: "gallery", label: t("tabGallery") },
+    ] as { key: TabKey; label: string }[]
+  ).filter((tab) => !hideTabs.includes(tab.key));
 
   return (
-    <section className="mt-10">
+    <section id="event-tabs" className="mt-10">
       <div className="mb-10 flex overflow-x-auto border-b border-zinc-200">
         {tabs.map((tab) => (
           <button
             key={tab.key}
+            id={`event-tab-${tab.key}`}
             type="button"
             onClick={() => setActiveTab(tab.key)}
             className={`min-w-fit px-8 pb-4 text-base font-extrabold uppercase tracking-[0.12em] transition-colors ${
@@ -397,6 +412,71 @@ export default function EventDetailsTabs({
                   )}
                 </button>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "teams" && tournamentTeams && (
+        <div>
+          {tournamentTeams.length === 0 ? (
+            <EmptyState
+              icon={<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>}
+              title={t("noTeamsYet")}
+              subtitle={t("firstTeamRegister")}
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {tournamentTeams.map((team) => {
+                const isMyTeam = myTournamentTeamId === team.id;
+                const isFull = team.memberCount >= team.playerCount;
+                const showJoin = canRequestJoin && team.recruitmentStatus === "open" && !isFull && tournamentId;
+
+                return (
+                  <div
+                    key={team.id}
+                    className={`rounded-2xl border bg-white p-5 flex flex-col gap-3 shadow-sm ${isMyTeam ? "border-[#e21d12]/40 ring-1 ring-[#e21d12]/20" : "border-zinc-200"}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-extrabold text-zinc-900 leading-tight">{team.name}</h3>
+                        <p className="text-xs text-zinc-500 mt-0.5">{t("captainLabel", { name: team.captainName })}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        {team.status === "pending" && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">{t("teamStatusPending")}</span>
+                        )}
+                        {team.recruitmentStatus === "open" && !isFull && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">{t("teamStatusOpen")}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-100 text-xs font-extrabold text-zinc-500 border-2 border-white">
+                        {team.captainName[0]}
+                      </div>
+                      {team.members.slice(0, 4).map((m) => (
+                        <div key={m.id} className="w-7 h-7 flex items-center justify-center rounded-full bg-zinc-200 text-xs font-extrabold text-zinc-500 border-2 border-white">
+                          {m.name[0]}
+                        </div>
+                      ))}
+                      {team.memberCount > 5 && (
+                        <span className="text-xs font-semibold text-zinc-400">+{team.memberCount - 5}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-zinc-500">
+                        {t("teamPlayerCount", { current: team.memberCount, total: team.playerCount })}
+                      </span>
+                      {showJoin && (
+                        <JoinOpenTeamButton teamId={team.id} tournamentId={tournamentId} />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

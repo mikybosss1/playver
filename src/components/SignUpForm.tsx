@@ -20,9 +20,10 @@ function EyeIcon({ show }: { show: boolean }) {
   );
 }
 
-export default function SignUpForm() {
+export default function SignUpForm({ callbackUrl }: { callbackUrl?: string }) {
   const t = useTranslations("SignUp");
   const router = useRouter();
+  const destination = callbackUrl ?? "/dashboard";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,7 +39,7 @@ export default function SignUpForm() {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
-    await signIn.social({ provider: "google", callbackURL: "/dashboard" });
+    await signIn.social({ provider: "google", callbackURL: destination });
     setGoogleLoading(false);
   }
 
@@ -56,7 +57,7 @@ export default function SignUpForm() {
     if (result.error) {
       setError(result.error.message ?? "Sign up failed.");
     } else {
-      router.push("/dashboard");
+      router.push(destination);
     }
   }
 
@@ -196,7 +197,10 @@ export default function SignUpForm() {
       {/* Sign in link */}
       <p className="text-center text-sm text-zinc-500">
         {t("hasAccount")}{" "}
-        <Link href="/auth/signin" className="text-[#e21d12] font-semibold hover:underline">
+        <Link
+          href={callbackUrl ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signin"}
+          className="text-[#e21d12] font-semibold hover:underline"
+        >
           {t("signInLink")}
         </Link>
       </p>

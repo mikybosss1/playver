@@ -51,7 +51,7 @@ export default function EventCard({
   joinedLabel: string;
   organizerLabel: string;
   onViewed?: (event: EventItem) => void;
-  href?: `/events/${string}`;
+  href?: string;
   action?: React.ReactNode;
 }) {
   const isEnded = new Date(event.endDateTime) < new Date();

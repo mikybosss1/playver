@@ -232,12 +232,11 @@ export async function getEvents() {
 }
 
 export async function getTournamentEvents() {
-  await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(ep.id) as "participantCount"
+    `SELECT e.*, u.name as "organizerName", COUNT(tt.id) as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
-     LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
+     LEFT JOIN "tournament_team" tt ON tt."tournamentId" = e.id AND tt.status = 'active'
      WHERE e."eventType" = 'Tournament'
      GROUP BY e.id, u.name
      ORDER BY
@@ -251,12 +250,11 @@ export async function getTournamentEvents() {
 export async function getMyTournaments() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return [];
-  await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(ep.id) as "participantCount"
+    `SELECT e.*, u.name as "organizerName", COUNT(tt.id) as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
-     LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
+     LEFT JOIN "tournament_team" tt ON tt."tournamentId" = e.id AND tt.status = 'active'
      WHERE e."organizerId" = $1 AND e."eventType" = 'Tournament'
      GROUP BY e.id, u.name
      ORDER BY
@@ -271,15 +269,21 @@ export async function getMyTournaments() {
 export async function getJoinedTournaments() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return [];
-  await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(all_ep.id) as "participantCount"
+    `SELECT e.*, u.name as "organizerName", COUNT(all_tt.id) as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
-     JOIN "event_participant" ep ON ep."eventId" = e.id
-     LEFT JOIN "event_participant" all_ep ON all_ep."eventId" = e.id
-     WHERE ep."userId" = $1 AND e."organizerId" <> $1 AND e."eventType" = 'Tournament'
-     GROUP BY e.id, u.name, ep."joinedAt"
+     JOIN "tournament_team" my_tt ON my_tt."tournamentId" = e.id
+       AND (
+         my_tt."captainId" = $1
+         OR EXISTS (
+           SELECT 1 FROM "tournament_team_member" ttm
+           WHERE ttm."teamId" = my_tt.id AND ttm."userId" = $1
+         )
+       )
+     LEFT JOIN "tournament_team" all_tt ON all_tt."tournamentId" = e.id AND all_tt.status = 'active'
+     WHERE e."organizerId" <> $1 AND e."eventType" = 'Tournament'
+     GROUP BY e.id, u.name
      ORDER BY
        CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
        CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
