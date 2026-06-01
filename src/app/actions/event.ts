@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail } from "@/lib/emails";
+import { ensureTournamentTables } from "@/lib/tournament-tables";
 
 let eventParticipantsTablePromise: Promise<void> | null = null;
 
@@ -232,6 +233,7 @@ export async function getEvents() {
 }
 
 export async function getTournamentEvents() {
+  await ensureTournamentTables();
   const result = await pool.query(
     `SELECT e.*, u.name as "organizerName", COUNT(tt.id) as "participantCount"
      FROM "event" e
@@ -248,6 +250,7 @@ export async function getTournamentEvents() {
 }
 
 export async function getMyTournaments() {
+  await ensureTournamentTables();
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return [];
   const result = await pool.query(
@@ -267,6 +270,7 @@ export async function getMyTournaments() {
 }
 
 export async function getJoinedTournaments() {
+  await ensureTournamentTables();
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return [];
   const result = await pool.query(

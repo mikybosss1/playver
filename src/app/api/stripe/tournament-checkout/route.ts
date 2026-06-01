@@ -3,11 +3,13 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 import { pool } from "@/lib/db";
+import { ensureTournamentTables } from "@/lib/tournament-tables";
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  await ensureTournamentTables();
   const { teamId } = await request.json();
   if (!teamId) return NextResponse.json({ error: "Missing teamId" }, { status: 400 });
 
