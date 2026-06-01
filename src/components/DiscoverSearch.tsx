@@ -23,11 +23,13 @@ function eventMatchesType(eventType: string, activeType: EventType) {
 export default function DiscoverSearch({
   events,
   hideTypeFilter = false,
+  linkTo = "events",
 }: {
   events: EventItem[];
   currentUserId: string | null;
   joinedEventIds: string[];
   hideTypeFilter?: boolean;
+  linkTo?: "events" | "tournaments";
 }) {
   const t = useTranslations("Discover");
 
@@ -102,9 +104,16 @@ export default function DiscoverSearch({
 
   const PAGE_SIZE = 6;
   const hasActiveSearch = search.trim() || activeType !== "all" || sport !== "all" || upcomingOnly;
-  const joinedLabel = (event: EventItem) => event.capacity
-    ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
-    : t("joinedCount", { count: event.participantCount });
+  const joinedLabel = (event: EventItem) => {
+    if (event.eventType === "Tournament") {
+      return event.capacity
+        ? `${event.participantCount} / ${event.capacity} teams`
+        : `${event.participantCount} team${event.participantCount !== 1 ? "s" : ""}`;
+    }
+    return event.capacity
+      ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
+      : t("joinedCount", { count: event.participantCount });
+  };
   const totalPages = Math.ceil(filteredEvents.length / PAGE_SIZE);
   const visibleEvents = filteredEvents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -191,7 +200,7 @@ export default function DiscoverSearch({
                 endedLabel={t("eventEnded")}
                 joinedLabel={joinedLabel(event)}
                 organizerLabel={t("organizedBy")}
-                href={`/events/${event.id}`}
+                href={`/${linkTo}/${event.id}`}
                 onViewed={rememberEvent}
               />
             ))}
@@ -248,7 +257,7 @@ export default function DiscoverSearch({
                 endedLabel={t("eventEnded")}
                 joinedLabel={joinedLabel(event)}
                 organizerLabel={t("organizedBy")}
-                href={`/events/${event.id}`}
+                href={`/${linkTo}/${event.id}`}
                 onViewed={rememberEvent}
               />
             ))}

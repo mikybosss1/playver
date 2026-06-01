@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripe";
 import { pool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { sendPaymentReceiptEmail, sendNewParticipantEmail, sendEventFullEmail } from "@/lib/emails";
+import { activateTournamentTeam } from "@/app/actions/tournament";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -19,7 +20,14 @@ export async function POST(request: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const { eventId, userId } = session.metadata ?? {};
+    const { eventId, userId, teamId, tournamentId } = session.metadata ?? {};
+
+    // Tournament team payment
+    if (teamId && tournamentId) {
+      await activateTournamentTeam(teamId);
+      revalidatePath(`/events/${tournamentId}`);
+      return NextResponse.json({ received: true });
+    }
 
     if (!eventId || !userId) {
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
