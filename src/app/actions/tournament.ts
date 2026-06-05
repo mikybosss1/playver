@@ -447,6 +447,31 @@ export async function declineTournamentMembership(token: string): Promise<{ erro
   }
 }
 
+export async function renameTournamentTeam(teamId: string, newName: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    const name = newName.trim();
+    if (!name) return { error: "Team name cannot be empty" };
+    if (name.length > 60) return { error: "Team name is too long" };
+    await ensureTournamentTables();
+
+    const res = await pool.query(
+      `SELECT "captainId", "tournamentId" FROM "tournament_team" WHERE id = $1`,
+      [teamId]
+    );
+    if (!res.rows[0]) return { error: "Team not found" };
+    if (res.rows[0].captainId !== session.user.id) return { error: "Forbidden" };
+
+    await pool.query(`UPDATE "tournament_team" SET name = $1 WHERE id = $2`, [name, teamId]);
+    revalidatePath(`/events/${res.rows[0].tournamentId}`);
+    return {};
+  } catch (e) {
+    console.error("[renameTournamentTeam]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
 export async function toggleTeamRecruitment(teamId: string): Promise<{ error?: string; newStatus?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
