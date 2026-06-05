@@ -33,6 +33,7 @@ export type TournamentTeam = {
   createdAt: string;
   memberCount: number;
   members: TournamentTeamMember[];
+  linkedTeamId: string | null;
 };
 
 export type TournamentJoinRequest = {
@@ -56,7 +57,7 @@ export type MyTeamOption = {
 
 async function fetchTeamWithMembers(teamId: string): Promise<TournamentTeam | null> {
   const teamRes = await pool.query(
-    `SELECT tt.*, u.name as "captainName"
+    `SELECT tt.*, u.name as "captainName", tt."linkedTeamId"
      FROM "tournament_team" tt
      JOIN "user" u ON u.id = tt."captainId"
      WHERE tt.id = $1`,
@@ -105,6 +106,7 @@ async function fetchTeamWithMembers(teamId: string): Promise<TournamentTeam | nu
     createdAt: new Date(t.createdAt).toISOString(),
     memberCount: activeMemberCount + 1, // +1 for captain
     members,
+    linkedTeamId: t.linkedTeamId ?? null,
   };
 }
 
