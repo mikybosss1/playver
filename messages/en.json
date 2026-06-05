@@ -6,7 +6,9 @@
     "teams": "Teams",
     "requestFeature": "Request a Feature",
     "login": "Log in",
-    "signup": "Sign up"
+    "signup": "Sign up",
+    "logout": "Log out",
+    "myDashboard": "My Dashboard"
   },
   "Home": {
     "eyebrow": "Find Your Next",
@@ -164,6 +166,8 @@
     "emptyJoinedEvents": "You haven't joined any events yet. Browse events to find one!",
     "joinedProgress": "{joined} / {capacity} Participants",
     "joinedCount": "{count} Participants",
+    "teamsProgress": "{joined} / {capacity} Teams",
+    "teamsCount": "{count} Teams",
     "free": "FREE",
     "eventEnded": "Event has ended",
     "organizedBy": "Organized by"

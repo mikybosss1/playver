@@ -350,13 +350,21 @@ export async function getJoinedEvents() {
   await ensureEventParticipantsTable();
 
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(all_ep.id) as "participantCount"
+    `SELECT e.*, u.name as "organizerName",
+       CASE WHEN e."eventType" = 'Tournament'
+         THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
+         ELSE (SELECT COUNT(*) FROM "event_participant" all_ep WHERE all_ep."eventId" = e.id)
+       END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
-     JOIN "event_participant" ep ON ep."eventId" = e.id
-     LEFT JOIN "event_participant" all_ep ON all_ep."eventId" = e.id
-     WHERE ep."userId" = $1 AND e."organizerId" <> $1
-     GROUP BY e.id, u.name, ep."joinedAt"
+     WHERE e."organizerId" <> $1
+       AND (
+         EXISTS (SELECT 1 FROM "event_participant" ep WHERE ep."eventId" = e.id AND ep."userId" = $1)
+         OR EXISTS (SELECT 1 FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt."captainId" = $1)
+         OR EXISTS (SELECT 1 FROM "tournament_team" tt
+                    JOIN "tournament_team_member" ttm ON ttm."teamId" = tt.id
+                    WHERE tt."tournamentId" = e.id AND ttm."userId" = $1)
+       )
      ORDER BY
        CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
        CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
@@ -398,15 +406,24 @@ export async function getEventParticipants(eventId: string): Promise<EventPartic
 export async function getTeamEvents(teamId: string): Promise<EventItem[]> {
   await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(all_ep.id)::int as "participantCount"
+    `SELECT e.*, u.name as "organizerName",
+       CASE WHEN e."eventType" = 'Tournament'
+         THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
+         ELSE (SELECT COUNT(*) FROM "event_participant" all_ep WHERE all_ep."eventId" = e.id)
+       END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
-     LEFT JOIN "event_participant" all_ep ON all_ep."eventId" = e.id
      WHERE e.id IN (
+       -- Regular events: any team member is a participant
        SELECT ep."eventId"
        FROM "event_participant" ep
        JOIN "team_member" tm ON tm."userId" = ep."userId"
        WHERE tm."teamId" = $1
+       UNION
+       -- Tournament events: team is registered via linkedTeamId
+       SELECT tt."tournamentId"
+       FROM "tournament_team" tt
+       WHERE tt."linkedTeamId" = $1
      )
      GROUP BY e.id, u.name
      ORDER BY e."startDateTime" ASC`,

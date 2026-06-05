@@ -19,6 +19,7 @@ async function ensureTeamMembersTable() {
       )`
     ),
     pool.query(`ALTER TABLE "team" ADD COLUMN IF NOT EXISTS "coverImageUrl" text`),
+    pool.query(`ALTER TABLE "team" ADD COLUMN IF NOT EXISTS "recruitmentOpen" boolean NOT NULL DEFAULT true`),
   ]).then(async () => {
     // Drop the old bad single-column constraint if it still exists (one-time migration)
     await pool.query(`
@@ -54,6 +55,7 @@ type TeamRow = {
   createdAt: Date | string;
   updatedAt: Date | string;
   memberCount: string | number;
+  recruitmentOpen: boolean;
 };
 
 function serializeTeam(row: TeamRow) {
@@ -62,6 +64,7 @@ function serializeTeam(row: TeamRow) {
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
     memberCount: Number(row.memberCount ?? 0),
+    recruitmentOpen: row.recruitmentOpen ?? true,
   };
 }
 
@@ -196,10 +199,11 @@ export async function joinTeam(teamId: string): Promise<{ error?: string }> {
     if (existing.rows.length > 0) return { error: "Already a member" };
 
     const [teamRow, userRow] = await Promise.all([
-      pool.query(`SELECT id, name, sport, location, "captainId" FROM "team" WHERE id = $1`, [teamId]),
+      pool.query(`SELECT id, name, sport, location, "captainId", "recruitmentOpen" FROM "team" WHERE id = $1`, [teamId]),
       pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [session.user.id]),
     ]);
     if (!teamRow.rows.length) return { error: "Team not found" };
+    if (!teamRow.rows[0].recruitmentOpen) return { error: "This team is not accepting new members" };
 
     await pool.query(
       `INSERT INTO "team_member" (id, "teamId", "userId") VALUES ($1, $2, $3)`,
@@ -247,6 +251,61 @@ export async function leaveTeam(teamId: string): Promise<{ error?: string }> {
     return {};
   } catch (e) {
     console.error("[leaveTeam]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+export async function removeTeamMember(teamId: string, memberId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureTeamMembersTable();
+
+    const teamRow = await pool.query(
+      `SELECT "captainId" FROM "team" WHERE id = $1`,
+      [teamId]
+    );
+    if (!teamRow.rows[0]) return { error: "Team not found" };
+    if (teamRow.rows[0].captainId !== session.user.id) return { error: "Forbidden" };
+    if (memberId === session.user.id) return { error: "Cannot remove yourself" };
+
+    await pool.query(
+      `DELETE FROM "team_member" WHERE "teamId" = $1 AND "userId" = $2`,
+      [teamId, memberId]
+    );
+
+    revalidatePath(`/teams/${teamId}`);
+    revalidatePath("/dashboard/teams");
+    return {};
+  } catch (e) {
+    console.error("[removeTeamMember]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+export async function toggleTeamRecruitment(teamId: string): Promise<{ error?: string; recruitmentOpen?: boolean }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureTeamMembersTable();
+
+    const res = await pool.query(
+      `SELECT "captainId", "recruitmentOpen" FROM "team" WHERE id = $1`,
+      [teamId]
+    );
+    if (!res.rows[0]) return { error: "Team not found" };
+    if (res.rows[0].captainId !== session.user.id) return { error: "Forbidden" };
+
+    const newValue = !res.rows[0].recruitmentOpen;
+    await pool.query(
+      `UPDATE "team" SET "recruitmentOpen" = $1, "updatedAt" = NOW() WHERE id = $2`,
+      [newValue, teamId]
+    );
+
+    revalidatePath(`/teams/${teamId}`);
+    return { recruitmentOpen: newValue };
+  } catch (e) {
+    console.error("[toggleTeamRecruitment]", e);
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }

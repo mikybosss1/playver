@@ -114,7 +114,7 @@ export default function TeamsGrid({ teams, currentUserId, initialJoinedIds }: Pr
                 </div>
 
                 <div className="mt-auto">
-                  {currentUserId && !isCaptain && (
+                  {currentUserId && !isCaptain && (isMember || team.recruitmentOpen) && (
                     <JoinTeamButton
                       teamId={team.id}
                       isMember={isMember}
