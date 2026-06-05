@@ -28,6 +28,8 @@ export async function ensureTournamentTables() {
         "confirmationToken"  text UNIQUE
       )
     `);
+    await pool.query(`ALTER TABLE "tournament_team" ADD COLUMN IF NOT EXISTS "linkedTeamId" text`);
+    await pool.query(`ALTER TABLE "tournament_team" ADD COLUMN IF NOT EXISTS "isImportedTeam" boolean NOT NULL DEFAULT false`);
     await pool.query(`ALTER TABLE "tournament_team_member" ADD COLUMN IF NOT EXISTS "confirmationStatus" text NOT NULL DEFAULT 'confirmed'`);
     await pool.query(`ALTER TABLE "tournament_team_member" ADD COLUMN IF NOT EXISTS "confirmationToken" text`);
     await pool.query(`

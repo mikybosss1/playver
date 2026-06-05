@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
 import LanguageToggle from "./LanguageToggle";
-import { useSession } from "@/lib/auth-client";
+import { useSession, signOut } from "@/lib/auth-client";
 
 const navHrefs = ["/tournaments", "/events", "/teams", "/request-a-feature"] as const;
 
@@ -55,12 +55,15 @@ export default function Navbar() {
           {firstName ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 pl-2 pr-2 sm:pr-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors"
+              className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors"
             >
               <span className="w-7 h-7 rounded-full bg-[#e21d12] flex items-center justify-center text-white text-xs font-bold shrink-0">
                 {firstName[0].toUpperCase()}
               </span>
-              <span className="hidden sm:inline text-sm font-semibold text-zinc-800">{firstName}</span>
+              <span className="hidden sm:flex flex-col leading-none">
+                <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">{firstName}</span>
+                <span className="text-xs font-bold text-zinc-800">{t("myDashboard")}</span>
+              </span>
             </Link>
           ) : (
             <>
@@ -89,6 +92,26 @@ export default function Navbar() {
       {/* Mobile dropdown menu */}
       {menuOpen && (
         <div className="lg:hidden bg-white border-t border-zinc-100 shadow-lg px-4 py-4 flex flex-col gap-1">
+          {firstName && (
+            <>
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors mb-1"
+              >
+                <span className="w-9 h-9 rounded-full bg-[#e21d12] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {firstName[0].toUpperCase()}
+                </span>
+                <div className="flex flex-col leading-none">
+                  <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-0.5">{firstName}</span>
+                  <span className="text-sm font-bold text-zinc-900">{t("myDashboard")}</span>
+                </div>
+                <svg className="ml-auto text-zinc-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </Link>
+              <div className="h-px bg-zinc-100 my-1" />
+            </>
+          )}
           {navLinks.map(({ href, label }) => (
             <Link
               key={href}
@@ -102,7 +125,15 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
-          {!firstName && (
+          {firstName ? (
+            <button
+              type="button"
+              onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } })}
+              className="mt-2 px-4 py-3 rounded-xl text-sm font-bold tracking-wide uppercase text-red-600 hover:bg-red-50 transition-colors text-left"
+            >
+              {t("logout")}
+            </button>
+          ) : (
             <Link
               href="/auth/signin"
               className="px-4 py-3 rounded-xl text-sm font-bold tracking-wide uppercase text-zinc-700 hover:bg-zinc-50 transition-colors sm:hidden"

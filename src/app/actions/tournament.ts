@@ -241,9 +241,20 @@ export async function getMyTeamOptions(): Promise<MyTeamOption[]> {
 
 // ─── Writes ──────────────────────────────────────────────────────────────────
 
+async function ensureTeamMemberTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "team_member" (
+      "id"       text PRIMARY KEY,
+      "teamId"   text NOT NULL REFERENCES "team"("id") ON DELETE CASCADE,
+      "userId"   text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+      "joinedAt" timestamp NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
 async function checkCanRegister(tournamentId: string, userId: string) {
   const tournamentRes = await pool.query(
-    `SELECT id, "endDateTime", price, capacity FROM "event" WHERE id = $1 AND "eventType" = 'Tournament'`,
+    `SELECT id, "endDateTime", price, capacity, sport, location FROM "event" WHERE id = $1 AND "eventType" = 'Tournament'`,
     [tournamentId]
   );
   if (!tournamentRes.rows[0]) return { error: "Tournament not found" as string };
@@ -290,15 +301,30 @@ export async function createTournamentTeam(
     const status = isPaid ? "pending" : "active";
     const paymentDeadline = isPaid ? new Date(Date.now() + 48 * 60 * 60 * 1000) : null;
 
+    // Create a persistent team profile on /teams
+    await ensureTeamMemberTable();
+    const linkedTeamId = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO "team" (id, name, sport, location, bio, "captainPhone", "logoUrl", "coverImageUrl", "captainId", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, NULL, NULL, NULL, NULL, $5, NOW(), NOW())`,
+      [linkedTeamId, teamName, check.tournament.sport, check.tournament.location, session.user.id]
+    );
+    await pool.query(
+      `INSERT INTO "team_member" (id, "teamId", "userId") VALUES ($1, $2, $3)`,
+      [crypto.randomUUID(), linkedTeamId, session.user.id]
+    );
+
     await pool.query(
       `INSERT INTO "tournament_team"
-         (id, "tournamentId", "captainId", name, status, "recruitmentStatus", "inviteCode", "paymentDeadline", "playerCount")
-       VALUES ($1, $2, $3, $4, $5, 'closed', $6, $7, $8)`,
-      [teamId, tournamentId, session.user.id, teamName, status, inviteCode, paymentDeadline, playerCount]
+         (id, "tournamentId", "captainId", name, status, "recruitmentStatus", "inviteCode", "paymentDeadline", "playerCount", "linkedTeamId", "isImportedTeam")
+       VALUES ($1, $2, $3, $4, $5, 'closed', $6, $7, $8, $9, false)`,
+      [teamId, tournamentId, session.user.id, teamName, status, inviteCode, paymentDeadline, playerCount, linkedTeamId]
     );
 
     revalidatePath(`/tournaments/${tournamentId}`);
     revalidatePath(`/dashboard/tournaments`);
+    revalidatePath("/teams");
+    revalidatePath("/dashboard/teams");
     return { teamId, inviteCode };
   } catch (e) {
     console.error("[createTournamentTeam]", e);
@@ -335,9 +361,9 @@ export async function importExistingTeamForTournament(
 
     await pool.query(
       `INSERT INTO "tournament_team"
-         (id, "tournamentId", "captainId", name, status, "recruitmentStatus", "inviteCode", "paymentDeadline", "playerCount")
-       VALUES ($1, $2, $3, $4, $5, 'closed', $6, $7, $8)`,
-      [teamId, tournamentId, session.user.id, teamName, status, inviteCode, paymentDeadline, playerCount]
+         (id, "tournamentId", "captainId", name, status, "recruitmentStatus", "inviteCode", "paymentDeadline", "playerCount", "linkedTeamId", "isImportedTeam")
+       VALUES ($1, $2, $3, $4, $5, 'closed', $6, $7, $8, $9, true)`,
+      [teamId, tournamentId, session.user.id, teamName, status, inviteCode, paymentDeadline, playerCount, existingTeamId]
     );
 
     // Fetch existing team members (excluding the captain — they're already the tournament team captain)
@@ -457,14 +483,20 @@ export async function renameTournamentTeam(teamId: string, newName: string): Pro
     await ensureTournamentTables();
 
     const res = await pool.query(
-      `SELECT "captainId", "tournamentId" FROM "tournament_team" WHERE id = $1`,
+      `SELECT "captainId", "tournamentId", "linkedTeamId", "isImportedTeam" FROM "tournament_team" WHERE id = $1`,
       [teamId]
     );
     if (!res.rows[0]) return { error: "Team not found" };
     if (res.rows[0].captainId !== session.user.id) return { error: "Forbidden" };
 
     await pool.query(`UPDATE "tournament_team" SET name = $1 WHERE id = $2`, [name, teamId]);
+
+    if (res.rows[0].linkedTeamId && !res.rows[0].isImportedTeam) {
+      await pool.query(`UPDATE "team" SET name = $1, "updatedAt" = NOW() WHERE id = $2`, [name, res.rows[0].linkedTeamId]);
+    }
+
     revalidatePath(`/events/${res.rows[0].tournamentId}`);
+    revalidatePath("/teams");
     return {};
   } catch (e) {
     console.error("[renameTournamentTeam]", e);
@@ -563,7 +595,7 @@ export async function respondToJoinRequest(requestId: string, accept: boolean): 
     await ensureTournamentTables();
 
     const reqRes = await pool.query(
-      `SELECT tjr.*, tt."captainId", tt."tournamentId", tt."playerCount"
+      `SELECT tjr.*, tt."captainId", tt."tournamentId", tt."playerCount", tt."linkedTeamId", tt."isImportedTeam"
        FROM "tournament_join_request" tjr
        JOIN "tournament_team" tt ON tt.id = tjr."teamId"
        WHERE tjr.id = $1`,
@@ -587,6 +619,16 @@ export async function respondToJoinRequest(requestId: string, accept: boolean): 
          ON CONFLICT ("teamId", "userId") DO NOTHING`,
         [crypto.randomUUID(), req.teamId, req.userId]
       );
+
+      if (req.linkedTeamId && !req.isImportedTeam) {
+        await ensureTeamMemberTable();
+        await pool.query(
+          `INSERT INTO "team_member" (id, "teamId", "userId") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+          [crypto.randomUUID(), req.linkedTeamId, req.userId]
+        );
+        revalidatePath("/teams");
+        revalidatePath("/dashboard/teams");
+      }
     }
 
     await pool.query(
@@ -661,6 +703,16 @@ export async function joinTeamViaInvite(inviteCode: string): Promise<{ error?: s
       [crypto.randomUUID(), team.id, session.user.id]
     );
 
+    if (team.linkedTeamId && !team.isImportedTeam) {
+      await ensureTeamMemberTable();
+      await pool.query(
+        `INSERT INTO "team_member" (id, "teamId", "userId") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+        [crypto.randomUUID(), team.linkedTeamId, session.user.id]
+      );
+      revalidatePath("/teams");
+      revalidatePath("/dashboard/teams");
+    }
+
     revalidatePath(`/tournaments/${team.tournamentId}`);
     return { tournamentId: team.tournamentId };
   } catch (e) {
@@ -676,7 +728,7 @@ export async function removeTeamMember(teamId: string, memberId: string): Promis
     await ensureTournamentTables();
 
     const teamRes = await pool.query(
-      `SELECT "captainId", "tournamentId" FROM "tournament_team" WHERE id = $1`,
+      `SELECT "captainId", "tournamentId", "linkedTeamId", "isImportedTeam" FROM "tournament_team" WHERE id = $1`,
       [teamId]
     );
     if (!teamRes.rows[0]) return { error: "Team not found" };
@@ -686,6 +738,14 @@ export async function removeTeamMember(teamId: string, memberId: string): Promis
       `DELETE FROM "tournament_team_member" WHERE "teamId" = $1 AND "userId" = $2`,
       [teamId, memberId]
     );
+
+    if (teamRes.rows[0].linkedTeamId && !teamRes.rows[0].isImportedTeam) {
+      await pool.query(
+        `DELETE FROM "team_member" WHERE "teamId" = $1 AND "userId" = $2`,
+        [teamRes.rows[0].linkedTeamId, memberId]
+      );
+      revalidatePath("/teams");
+    }
 
     revalidatePath(`/tournaments/${teamRes.rows[0].tournamentId}`);
     return {};
@@ -702,7 +762,7 @@ export async function leaveTournamentTeam(teamId: string): Promise<{ error?: str
     await ensureTournamentTables();
 
     const teamRes = await pool.query(
-      `SELECT "tournamentId" FROM "tournament_team" WHERE id = $1`,
+      `SELECT "tournamentId", "linkedTeamId", "isImportedTeam" FROM "tournament_team" WHERE id = $1`,
       [teamId]
     );
 
@@ -711,7 +771,17 @@ export async function leaveTournamentTeam(teamId: string): Promise<{ error?: str
       [teamId, session.user.id]
     );
 
-    if (teamRes.rows[0]) revalidatePath(`/tournaments/${teamRes.rows[0].tournamentId}`);
+    if (teamRes.rows[0]) {
+      if (teamRes.rows[0].linkedTeamId && !teamRes.rows[0].isImportedTeam) {
+        await pool.query(
+          `DELETE FROM "team_member" WHERE "teamId" = $1 AND "userId" = $2`,
+          [teamRes.rows[0].linkedTeamId, session.user.id]
+        );
+        revalidatePath("/teams");
+        revalidatePath("/dashboard/teams");
+      }
+      revalidatePath(`/tournaments/${teamRes.rows[0].tournamentId}`);
+    }
     return {};
   } catch (e) {
     console.error("[leaveTournamentTeam]", e);
@@ -726,13 +796,19 @@ export async function disbandTournamentTeam(teamId: string): Promise<{ error?: s
     await ensureTournamentTables();
 
     const teamRes = await pool.query(
-      `SELECT "captainId", "tournamentId" FROM "tournament_team" WHERE id = $1`,
+      `SELECT "captainId", "tournamentId", "linkedTeamId", "isImportedTeam" FROM "tournament_team" WHERE id = $1`,
       [teamId]
     );
     if (!teamRes.rows[0]) return { error: "Team not found" };
     if (teamRes.rows[0].captainId !== session.user.id) return { error: "Forbidden" };
 
     await pool.query(`DELETE FROM "tournament_team" WHERE id = $1`, [teamId]);
+
+    if (teamRes.rows[0].linkedTeamId && !teamRes.rows[0].isImportedTeam) {
+      await pool.query(`DELETE FROM "team" WHERE id = $1`, [teamRes.rows[0].linkedTeamId]);
+      revalidatePath("/teams");
+      revalidatePath("/dashboard/teams");
+    }
 
     revalidatePath(`/tournaments/${teamRes.rows[0].tournamentId}`);
     revalidatePath(`/dashboard/tournaments`);

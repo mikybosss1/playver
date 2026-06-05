@@ -6,7 +6,9 @@
     "teams": "Équipes",
     "requestFeature": "Demander une fonctionnalité",
     "login": "Connexion",
-    "signup": "S'inscrire"
+    "signup": "S'inscrire",
+    "logout": "Se déconnecter",
+    "myDashboard": "Mon tableau de bord"
   },
   "Home": {
     "eyebrow": "Trouvez votre prochain",
@@ -164,6 +166,8 @@
     "emptyJoinedEvents": "Vous n'avez pas encore rejoint d'événements. Parcourez les événements pour en trouver un !",
     "joinedProgress": "{joined} / {capacity} participants",
     "joinedCount": "{count} participants",
+    "teamsProgress": "{joined} / {capacity} équipes",
+    "teamsCount": "{count} équipes",
     "free": "GRATUIT",
     "eventEnded": "Événement terminé",
     "organizedBy": "Organisé par"

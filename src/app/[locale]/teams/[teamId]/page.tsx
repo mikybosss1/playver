@@ -5,6 +5,8 @@ import { getTranslations } from "next-intl/server";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import JoinTeamButton from "@/components/JoinTeamButton";
+import TeamRecruitmentToggle from "@/components/TeamRecruitmentToggle";
+import RemoveTeamMemberButton from "@/components/RemoveTeamMemberButton";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getMembershipMap, getTeamById, getTeamMembers } from "@/app/actions/team";
@@ -141,42 +143,46 @@ export default async function TeamDetailsPage({
                       {sortedMembers.map((member) => {
                         const isTheCaptain = member.id === team.captainId;
                         return (
-                          <Link
+                          <div
                             key={member.id}
-                            href={`/athletes/${member.id}`}
                             className={`group flex items-center gap-4 rounded-2xl border bg-white p-4 transition-shadow hover:shadow-md ${
                               isTheCaptain
                                 ? "border-[#e21d12]/40 ring-2 ring-[#e21d12]/20"
                                 : "border-zinc-200"
                             }`}
                           >
-                            <div className={`flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full font-extrabold ${
-                              isTheCaptain
-                                ? "bg-[#e21d12]/10 text-[#e21d12]"
-                                : "bg-zinc-100 text-zinc-500"
-                            }`}>
-                              {member.image ? (
-                                <Image src={member.image} alt={member.name} width={48} height={48} className="size-12 object-cover" />
-                              ) : (
-                                member.name[0]?.toUpperCase()
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                <p className="truncate font-extrabold text-zinc-950 group-hover:text-[#e21d12] transition-colors">
-                                  {member.name}
-                                </p>
-                                {isTheCaptain && (
-                                  <span className="shrink-0 rounded-full bg-[#e21d12] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white">
-                                    {t("captainBadge")}
-                                  </span>
+                            <Link href={`/athletes/${member.id}`} className="flex items-center gap-4 min-w-0 flex-1">
+                              <div className={`flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full font-extrabold ${
+                                isTheCaptain
+                                  ? "bg-[#e21d12]/10 text-[#e21d12]"
+                                  : "bg-zinc-100 text-zinc-500"
+                              }`}>
+                                {member.image ? (
+                                  <Image src={member.image} alt={member.name} width={48} height={48} className="size-12 object-cover" />
+                                ) : (
+                                  member.name[0]?.toUpperCase()
                                 )}
                               </div>
-                              <p className="text-sm text-zinc-400">
-                                {isTheCaptain ? t("captain") : `${t("joined")} ${formatDate(member.joinedAt)}`}
-                              </p>
-                            </div>
-                          </Link>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="truncate font-extrabold text-zinc-950 group-hover:text-[#e21d12] transition-colors">
+                                    {member.name}
+                                  </p>
+                                  {isTheCaptain && (
+                                    <span className="shrink-0 rounded-full bg-[#e21d12] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white">
+                                      {t("captainBadge")}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-zinc-400">
+                                  {isTheCaptain ? t("captain") : `${t("joined")} ${formatDate(member.joinedAt)}`}
+                                </p>
+                              </div>
+                            </Link>
+                            {isCaptain && !isTheCaptain && (
+                              <RemoveTeamMemberButton teamId={team.id} memberId={member.id} />
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -262,12 +268,15 @@ export default async function TeamDetailsPage({
                 <p className="mt-4 text-sm text-zinc-500">
                   {t("captain")}: <span className="font-semibold text-zinc-700">{team.captainName}</span>
                 </p>
-                <div className="mt-6">
+                <div className="mt-6 flex flex-col gap-3">
                   {isCaptain ? (
-                    <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
-                      {t("yourTeam")}
-                    </span>
-                  ) : session ? (
+                    <>
+                      <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
+                        {t("yourTeam")}
+                      </span>
+                      <TeamRecruitmentToggle teamId={team.id} initialOpen={team.recruitmentOpen} />
+                    </>
+                  ) : session && (team.recruitmentOpen || membershipSet.has(team.id)) ? (
                     <JoinTeamButton
                       teamId={team.id}
                       isMember={membershipSet.has(team.id)}

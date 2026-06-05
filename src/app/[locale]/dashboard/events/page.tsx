@@ -6,9 +6,17 @@ import { getJoinedEvents, getMyEvents } from "@/app/actions/event";
 export default async function DashboardEventsPage() {
   const t = await getTranslations("DashboardEvents");
   const [myEvents, joinedEvents] = await Promise.all([getMyEvents(), getJoinedEvents()]);
-  const joinedLabel = (event: (typeof myEvents)[number]) => event.capacity
-    ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
-    : t("joinedCount", { count: event.participantCount });
+  const joinedLabel = (event: (typeof myEvents)[number]) => {
+    const isTournament = event.eventType === "Tournament";
+    if (isTournament) {
+      return event.capacity
+        ? t("teamsProgress", { joined: event.participantCount, capacity: event.capacity })
+        : t("teamsCount", { count: event.participantCount });
+    }
+    return event.capacity
+      ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
+      : t("joinedCount", { count: event.participantCount });
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
