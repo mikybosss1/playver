@@ -242,6 +242,7 @@
   "TournamentPanel": {
     "teamRegistered": "Team registered",
     "awaitingPayment": "Awaiting payment",
+    "completePayment": "Complete Payment",
     "deadline": "Deadline",
     "disbandTeam": "Disband Team",
     "disbandConfirm": "Are you sure you want to disband your team? This cannot be undone.",
@@ -360,6 +361,7 @@
     "modeIndividual": "Individual",
     "modeTeam": "Team-Based",
     "capacityLabel": "Total Event Capacity",
+    "capacityTeamLabel": "Total Number of Teams",
     "capacityPlaceholder": "e.g. 20",
     "maxPlayersLabel": "Max Players Per Team",
     "maxPlayersPlaceholder": "e.g. 5",

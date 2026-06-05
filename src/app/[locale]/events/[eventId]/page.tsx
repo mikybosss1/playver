@@ -145,7 +145,7 @@ export default async function EventDetailsPage({
                         </Link>
                       </div>
                     )}
-                    {isSuperAdmin && !isOrganizer && (
+                    {isSuperAdmin && (
                       <AdminDeleteEventButton eventId={event.id} eventTitle={event.title} />
                     )}
                   </div>
@@ -155,6 +155,7 @@ export default async function EventDetailsPage({
                       team={myTeam}
                       pendingRequests={pendingRequests}
                       tournamentId={eventId}
+                      price={event.price}
                     />
                   ) : myTeam && isMember ? (
                     <TournamentMemberPanel team={myTeam} />

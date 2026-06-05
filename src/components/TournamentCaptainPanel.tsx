@@ -32,15 +32,34 @@ export function TournamentCaptainPanel({
   team,
   pendingRequests,
   tournamentId,
+  price = 0,
 }: {
   team: TournamentTeam;
   pendingRequests: TournamentJoinRequest[];
   tournamentId: string;
+  price?: number;
 }) {
   const t = useTranslations("TournamentPanel");
   const [isPending, startTransition] = useTransition();
   const [copiedLink, setCopiedLink] = useState(false);
   const [error, setError] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  async function handlePay() {
+    setPaymentLoading(true);
+    try {
+      const res = await fetch("/api/stripe/tournament-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: team.id }),
+      });
+      const { url } = await res.json();
+      if (url) { window.location.href = url; return; }
+    } catch {
+      // fall through
+    }
+    setPaymentLoading(false);
+  }
   const router = useRouter();
 
   const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/tournaments/${tournamentId}/team/${team.id}/join?code=${team.inviteCode}`;
@@ -102,6 +121,16 @@ export function TournamentCaptainPanel({
             </span>
           )}
         </div>
+        {team.status === "pending" && price > 0 && (
+          <button
+            type="button"
+            onClick={handlePay}
+            disabled={paymentLoading}
+            className="px-4 py-1.5 text-xs font-semibold text-white bg-[#e21d12] hover:bg-[#d41810] rounded-lg transition-colors disabled:opacity-60"
+          >
+            {paymentLoading ? "..." : t("completePayment")}
+          </button>
+        )}
         <div className="ml-auto">
           <button
             type="button"
