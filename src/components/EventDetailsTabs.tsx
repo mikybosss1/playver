@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/routing";
 import type { EventItem, EventParticipant, GalleryItem } from "@/app/actions/event";
 import type { TournamentTeam } from "@/app/actions/tournament";
 import { adminRemoveParticipant } from "@/app/actions/admin";
@@ -431,15 +432,11 @@ export default function EventDetailsTabs({
                 const isMyTeam = myTournamentTeamId === team.id;
                 const isFull = team.memberCount >= team.playerCount;
                 const showJoin = canRequestJoin && team.recruitmentStatus === "open" && !isFull && tournamentId;
-
-                return (
-                  <div
-                    key={team.id}
-                    className={`rounded-2xl border bg-white p-5 flex flex-col gap-3 shadow-sm ${isMyTeam ? "border-[#e21d12]/40 ring-1 ring-[#e21d12]/20" : "border-zinc-200"}`}
-                  >
+                const cardContent = (
+                  <>
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-extrabold text-zinc-900 leading-tight">{team.name}</h3>
+                        <h3 className="font-extrabold text-zinc-900 leading-tight group-hover:text-[#e21d12] transition-colors">{team.name}</h3>
                         <p className="text-xs text-zinc-500 mt-0.5">{t("captainLabel", { name: team.captainName })}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
@@ -474,6 +471,18 @@ export default function EventDetailsTabs({
                         <JoinOpenTeamButton teamId={team.id} tournamentId={tournamentId} />
                       )}
                     </div>
+                  </>
+                );
+
+                const className = `group rounded-2xl border bg-white p-5 flex flex-col gap-3 shadow-sm transition-shadow ${isMyTeam ? "border-[#e21d12]/40 ring-1 ring-[#e21d12]/20" : "border-zinc-200"} ${team.linkedTeamId ? "hover:shadow-md cursor-pointer" : ""}`;
+
+                return team.linkedTeamId ? (
+                  <Link key={team.id} href={`/teams/${team.linkedTeamId}`} className={className}>
+                    {cardContent}
+                  </Link>
+                ) : (
+                  <div key={team.id} className={className}>
+                    {cardContent}
                   </div>
                 );
               })}
