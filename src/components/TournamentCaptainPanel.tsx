@@ -12,6 +12,7 @@ import {
   leaveTournamentTeam,
   disbandTournamentTeam,
   requestToJoinTeam,
+  renameTournamentTeam,
 } from "@/app/actions/tournament";
 import type { TournamentTeam, TournamentJoinRequest } from "@/app/actions/tournament";
 
@@ -44,6 +45,21 @@ export function TournamentCaptainPanel({
   const [copiedLink, setCopiedLink] = useState(false);
   const [error, setError] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(team.name);
+
+  function handleStartRename() {
+    setNameInput(team.name);
+    setEditingName(true);
+  }
+
+  function handleRename() {
+    if (!nameInput.trim() || nameInput.trim() === team.name) { setEditingName(false); return; }
+    startTransition(async () => {
+      const res = await renameTournamentTeam(team.id, nameInput.trim());
+      if (res.error) { setError(res.error); } else { setEditingName(false); router.refresh(); }
+    });
+  }
 
   async function handlePay() {
     setPaymentLoading(true);
@@ -149,7 +165,27 @@ export function TournamentCaptainPanel({
         {/* Col 1: Team roster */}
         <div className="rounded-xl border border-zinc-200 p-4 flex flex-col gap-2">
           <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">{t("yourTeam")}</p>
-          <p className="text-base font-extrabold text-zinc-900 leading-tight">{team.name}</p>
+          {editingName ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                autoFocus
+                value={nameInput}
+                onChange={e => setNameInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setEditingName(false); }}
+                maxLength={60}
+                className="flex-1 min-w-0 text-sm font-extrabold text-zinc-900 border-b border-zinc-300 outline-none bg-transparent"
+              />
+              <button type="button" onClick={handleRename} disabled={isPending} className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-50">Save</button>
+              <button type="button" onClick={() => setEditingName(false)} className="text-[10px] font-bold text-zinc-400 hover:text-zinc-600">✕</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 group">
+              <p className="text-base font-extrabold text-zinc-900 leading-tight">{team.name}</p>
+              <button type="button" onClick={handleStartRename} className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            </div>
+          )}
           <p className="text-xs text-zinc-500">{t("players", { current: team.memberCount, total: team.playerCount })}</p>
           <div className="mt-1 flex flex-col gap-2">
             {/* Captain */}

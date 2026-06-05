@@ -219,7 +219,11 @@ export async function createEvent(data: {
 export async function getEvents() {
   await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(ep.id) as "participantCount"
+    `SELECT e.*, u.name as "organizerName",
+       CASE WHEN e."eventType" = 'Tournament'
+         THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
+         ELSE COUNT(ep.id)
+       END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
@@ -300,7 +304,11 @@ export async function getJoinedTournaments() {
 export async function getEventById(eventId: string) {
   await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(ep.id) as "participantCount"
+    `SELECT e.*, u.name as "organizerName",
+       CASE WHEN e."eventType" = 'Tournament'
+         THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
+         ELSE COUNT(ep.id)
+       END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
@@ -317,7 +325,11 @@ export async function getMyEvents() {
   await ensureEventParticipantsTable();
 
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(ep.id) as "participantCount"
+    `SELECT e.*, u.name as "organizerName",
+       CASE WHEN e."eventType" = 'Tournament'
+         THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
+         ELSE COUNT(ep.id)
+       END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
