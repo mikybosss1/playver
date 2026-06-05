@@ -727,7 +727,10 @@ export async function activateTournamentTeam(teamId: string): Promise<{ error?: 
        RETURNING "tournamentId"`,
       [teamId]
     );
-    if (res.rows[0]) revalidatePath(`/tournaments/${res.rows[0].tournamentId}`);
+    if (res.rows[0]) {
+      revalidatePath(`/tournaments/${res.rows[0].tournamentId}`);
+      revalidatePath(`/events/${res.rows[0].tournamentId}`);
+    }
     return {};
   } catch (e) {
     console.error("[activateTournamentTeam]", e);

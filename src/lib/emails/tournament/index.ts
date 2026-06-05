@@ -58,6 +58,47 @@ export async function sendTournamentMemberInviteEmail(to: string, data: {
   });
 }
 
+export async function sendTournamentTeamPaymentReceiptEmail(to: string, data: {
+  captainName: string;
+  teamName: string;
+  tournamentTitle: string;
+  sport: string;
+  location: string;
+  startDateTime: string;
+  tournamentId: string;
+  amountCents: number;
+  currency: string;
+}) {
+  const amount = new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency: data.currency.toUpperCase(),
+  }).format(data.amountCents / 100);
+
+  const html = layout(`
+    <p style="margin:0 0 6px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#e21d12;">Payment confirmed</p>
+    <h1 style="margin:0 0 24px;font-size:26px;font-weight:900;color:#18181b;line-height:1.2;">Your team is registered, ${data.captainName}!</h1>
+    <p style="margin:0 0 28px;font-size:15px;color:#52525b;line-height:1.6;">Payment received for <strong>${data.teamName}</strong>. Your team is now officially registered for <strong>${data.tournamentTitle}</strong>.</p>
+
+    ${detailTable(
+      detail("🏆", "Tournament", data.tournamentTitle),
+      detail("🏅", "Sport", data.sport),
+      detail("📍", "Location", data.location),
+      detail("📅", "Date", fmt(data.startDateTime)),
+      detail("👥", "Team", data.teamName),
+      detail("💳", "Amount paid", amount),
+    )}
+
+    <center>${ctaButton(`${BASE_URL}/events/${data.tournamentId}`, "View tournament →")}</center>
+  `);
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Payment confirmed — ${data.teamName} is registered for ${data.tournamentTitle}`,
+    html,
+  });
+}
+
 export async function sendJoinRequestNotificationEmail(to: string, data: {
   captainName: string;
   requesterName: string;

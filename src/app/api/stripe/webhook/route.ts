@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { pool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { sendPaymentReceiptEmail, sendNewParticipantEmail, sendEventFullEmail } from "@/lib/emails";
+import { sendPaymentReceiptEmail, sendNewParticipantEmail, sendEventFullEmail, sendTournamentTeamPaymentReceiptEmail } from "@/lib/emails";
 import { activateTournamentTeam } from "@/app/actions/tournament";
 
 export async function POST(request: Request) {
@@ -26,6 +26,36 @@ export async function POST(request: Request) {
     if (teamId && tournamentId) {
       await activateTournamentTeam(teamId);
       revalidatePath(`/events/${tournamentId}`);
+
+      Promise.all([
+        pool.query(
+          `SELECT tt.name as "teamName", u.name as "captainName", u.email
+           FROM "tournament_team" tt
+           JOIN "user" u ON u.id = tt."captainId"
+           WHERE tt.id = $1`,
+          [teamId]
+        ),
+        pool.query(
+          `SELECT title, sport, location, "startDateTime" FROM "event" WHERE id = $1`,
+          [tournamentId]
+        ),
+      ]).then(([teamRow, eventRow]) => {
+        const t = teamRow.rows[0];
+        const e = eventRow.rows[0];
+        if (!t?.email || !e) return;
+        sendTournamentTeamPaymentReceiptEmail(t.email, {
+          captainName: t.captainName ?? "Captain",
+          teamName: t.teamName,
+          tournamentTitle: e.title,
+          sport: e.sport,
+          location: e.location,
+          startDateTime: new Date(e.startDateTime).toISOString(),
+          tournamentId,
+          amountCents: session.amount_total ?? 0,
+          currency: session.currency ?? "cad",
+        }).catch(() => {});
+      }).catch(() => {});
+
       return NextResponse.json({ received: true });
     }
 
