@@ -179,6 +179,7 @@ export async function adminDeleteEvent(eventId: string) {
     pool.query(`SELECT title, sport, location, "startDateTime" FROM "event" WHERE id = $1`, [eventId]),
     pool.query(`SELECT u.name, u.email FROM "event_participant" ep JOIN "user" u ON u.id = ep."userId" WHERE ep."eventId" = $1`, [eventId]),
   ]);
+  await pool.query(`DELETE FROM "event_payment" WHERE "eventId" = $1`, [eventId]);
   await pool.query(`DELETE FROM "event" WHERE id = $1`, [eventId]);
   const e = eventRow.rows[0];
   if (e) {

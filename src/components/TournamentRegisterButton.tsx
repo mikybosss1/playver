@@ -47,7 +47,7 @@ export default function TournamentRegisterButton({
     const team = myTeams.find((t) => t.id === teamId);
     if (team) {
       setTeamName(team.name);
-      setPlayerCount(Math.min(team.memberCount, max));
+      setPlayerCount(max);
     }
   }
 

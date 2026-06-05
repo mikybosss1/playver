@@ -242,6 +242,7 @@
   "TournamentPanel": {
     "teamRegistered": "Équipe inscrite",
     "awaitingPayment": "En attente de paiement",
+    "completePayment": "Compléter le paiement",
     "deadline": "Échéance",
     "disbandTeam": "Dissoudre l'équipe",
     "disbandConfirm": "Êtes-vous sûr de vouloir dissoudre votre équipe ? Cette action est irréversible.",
@@ -360,6 +361,7 @@
     "modeIndividual": "Individuel",
     "modeTeam": "Par équipe",
     "capacityLabel": "Capacité totale",
+    "capacityTeamLabel": "Nombre total d'équipes",
     "capacityPlaceholder": "ex. 20",
     "maxPlayersLabel": "Joueurs max par équipe",
     "maxPlayersPlaceholder": "ex. 5",

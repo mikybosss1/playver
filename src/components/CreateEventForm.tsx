@@ -776,7 +776,7 @@ export default function CreateEventForm({
             ))}
           </div>
         </Field>
-        <Field label={t("capacityLabel")}>
+        <Field label={registrationMode === "team" ? t("capacityTeamLabel") : t("capacityLabel")}>
           <input
             type="number" min="1" value={capacity} onChange={e => setCapacity(e.target.value)}
             placeholder={t("capacityPlaceholder")} className={inputClass}

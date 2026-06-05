@@ -13,12 +13,18 @@ export default function AdminDeleteEventButton({
 }) {
   const [showModal, setShowModal] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState("");
   const router = useRouter();
 
   function handleConfirm() {
+    setError("");
     startTransition(async () => {
-      await adminDeleteEvent(eventId);
-      router.push("/events");
+      try {
+        await adminDeleteEvent(eventId);
+        router.push("/events");
+      } catch {
+        setError("Failed to delete event. Please try again.");
+      }
     });
   }
 
@@ -44,6 +50,9 @@ export default function AdminDeleteEventButton({
                 Are you sure you want to delete <span className="font-semibold text-zinc-800">{eventTitle}</span>? This will remove all participants and cannot be undone.
               </p>
             </div>
+            {error && (
+              <p className="text-sm font-semibold text-red-600">{error}</p>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
