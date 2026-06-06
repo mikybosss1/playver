@@ -111,86 +111,94 @@ export default async function EventDetailsPage({
             </div>
 
             {isTournament ? (
-              /* ── Tournament: full-width layout, registration below title ── */
-              <div className="p-6 flex flex-col gap-6">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h1 className="text-3xl font-extrabold leading-tight text-zinc-950" style={{ fontFamily: "var(--font-playfair)" }}>
-                      {event.title}
-                    </h1>
-                    <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">{t("tournamentBadge", { sport: event.sport })}</p>
-                  </div>
-                  {event.price > 0 ? (
-                    <span className="text-2xl font-extrabold text-[#e21d12] shrink-0">{formatPrice(event.price)}</span>
-                  ) : (
-                    <span className="text-2xl font-extrabold uppercase text-emerald-600 shrink-0">{t("free")}</span>
-                  )}
-                </div>
-
-                {/* Registration — full width, horizontal internally */}
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">{t("registration")}</p>
-                    {isOrganizer && (
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-lg bg-[#e21d12]/10 px-3 py-1.5 text-xs font-bold text-[#e21d12]">
-                          {t("youreOrganizer")}
-                        </span>
-                        <Link
-                          href={`/events/${event.id}/edit`}
-                          className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
-                        >
-                          {t("editTournament")}
-                        </Link>
+              /* ── Tournament: sidebar layout matching regular events ── */
+              (() => {
+                const activeTeams = teams.filter(tm => tm.status === "active").length;
+                const teamsProgress = (event.capacity ?? 0) > 0 ? Math.min((activeTeams / event.capacity!) * 100, 100) : 0;
+                return (
+                  <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_300px]">
+                    {/* Left: title */}
+                    <div className="order-last lg:order-first flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight text-zinc-950" style={{ fontFamily: "var(--font-playfair)" }}>
+                          {event.title}
+                        </h1>
+                        <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">{t("tournamentBadge", { sport: event.sport })}</p>
                       </div>
-                    )}
-                    {isSuperAdmin && (
-                      <AdminDeleteEventButton eventId={event.id} eventTitle={event.title} />
-                    )}
-                  </div>
+                      {event.price > 0 ? (
+                        <span className="text-2xl font-extrabold text-[#e21d12] shrink-0">{formatPrice(event.price)}</span>
+                      ) : (
+                        <span className="text-2xl font-extrabold uppercase text-emerald-600 shrink-0">{t("free")}</span>
+                      )}
+                    </div>
 
-                  {myTeam && isCaptain ? (
-                    <TournamentCaptainPanel
-                      team={myTeam}
-                      pendingRequests={pendingRequests}
-                      tournamentId={eventId}
-                      price={event.price}
-                    />
-                  ) : myTeam && isMember ? (
-                    <TournamentMemberPanel team={myTeam} />
-                  ) : session && !isEnded ? (
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <TournamentRegisterButton
-                        tournamentId={eventId}
-                        price={event.price}
-                        maxPlayersPerTeam={event.maxPlayersPerTeam}
-                        myTeams={myTeamOptions}
-                      />
-                      <JoinTeamTabButton />
-                      <p className="text-sm text-zinc-500 shrink-0 sm:ml-auto">
-                        {event.capacity
-                          ? t("tournamentTeamCountMax", { count: teams.filter(tm => tm.status === "active").length, max: event.capacity })
-                          : t("tournamentTeamCount", { count: teams.filter(tm => tm.status === "active").length })}
+                    {/* Right: registration sidebar */}
+                    <aside className="h-fit rounded-2xl border border-zinc-200 bg-zinc-50 p-5 order-first lg:order-last">
+                      <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">{t("registration")}</p>
+                      <p className="mt-3 text-xl font-extrabold text-zinc-950">
+                        {(event.capacity ?? 0) > 0
+                          ? t("tournamentTeamCountMax", { count: activeTeams, max: event.capacity ?? 0 })
+                          : t("tournamentTeamCount", { count: activeTeams })}
                       </p>
-                    </div>
-                  ) : !session ? (
-                    <div className="flex items-center gap-4">
-                      <Link
-                        href="/auth/signin"
-                        className="inline-flex px-5 py-2.5 text-sm font-semibold rounded-lg bg-[#e21d12] text-white hover:bg-[#d41810] transition-colors"
-                      >
-                        {t("signInToRegister")}
-                      </Link>
-                      <p className="text-sm text-zinc-500">
-                        {t("tournamentTeamCount", { count: teams.filter(tm => tm.status === "active").length })}
+                      {(event.capacity ?? 0) > 0 && (
+                        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
+                          <div className="h-full rounded-full bg-[#e21d12]" style={{ width: `${teamsProgress}%` }} />
+                        </div>
+                      )}
+                      <p className="mt-6 text-sm text-zinc-500">
+                        {t("organizedBy")}: <span className="font-semibold text-zinc-700">{event.organizerName}</span>
                       </p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-zinc-500">{t("registrationClosed")}</p>
-                  )}
-                </div>
-              </div>
+                      <div className="mt-6 flex flex-col gap-2">
+                        {isOrganizer && (
+                          <>
+                            <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
+                              {t("youreOrganizer")}
+                            </span>
+                            <Link
+                              href={`/events/${event.id}/edit`}
+                              className="block rounded-lg border border-zinc-200 bg-white px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                            >
+                              {t("editTournament")}
+                            </Link>
+                          </>
+                        )}
+                        {myTeam && isCaptain ? (
+                          <TournamentCaptainPanel
+                            team={myTeam}
+                            pendingRequests={pendingRequests}
+                            tournamentId={eventId}
+                            price={event.price}
+                          />
+                        ) : myTeam && isMember ? (
+                          <TournamentMemberPanel team={myTeam} />
+                        ) : session && !isEnded ? (
+                          <>
+                            <TournamentRegisterButton
+                              tournamentId={eventId}
+                              price={event.price}
+                              maxPlayersPerTeam={event.maxPlayersPerTeam}
+                              myTeams={myTeamOptions}
+                            />
+                            <JoinTeamTabButton />
+                          </>
+                        ) : !session ? (
+                          <Link
+                            href="/auth/signin"
+                            className="block rounded-lg bg-[#e21d12] px-4 py-3 text-center text-sm font-semibold text-white hover:bg-[#d41810] transition-colors"
+                          >
+                            {t("signInToRegister")}
+                          </Link>
+                        ) : (
+                          <p className="text-sm text-zinc-500">{t("registrationClosed")}</p>
+                        )}
+                        {isSuperAdmin && (
+                          <AdminDeleteEventButton eventId={event.id} eventTitle={event.title} />
+                        )}
+                      </div>
+                    </aside>
+                  </div>
+                );
+              })()
             ) : (
               /* ── Regular event: sidebar layout ── */
               <div className="grid gap-6 p-6 lg:grid-cols-[1fr_300px]">

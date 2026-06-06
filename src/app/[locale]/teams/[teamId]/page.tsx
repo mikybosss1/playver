@@ -32,9 +32,9 @@ function LocationIcon() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
-    <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 p-4 sm:p-6">
+    <div className={`rounded-[18px] border border-zinc-200 bg-zinc-50 p-4 sm:p-6 ${className ?? ""}`}>
       <p className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-zinc-500">{label}</p>
       <p className="mt-3 sm:mt-4 text-xl sm:text-2xl font-extrabold text-zinc-950 truncate">{value}</p>
     </div>
@@ -121,7 +121,7 @@ export default async function TeamDetailsPage({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
                   <MetricCard label={t("captain")} value={team.captainName} />
                   <MetricCard label={t("members")} value={String(team.memberCount)} />
-                  <MetricCard label={t("created")} value={formatDate(team.createdAt)} />
+                  <MetricCard label={t("created")} value={formatDate(team.createdAt)} className="col-span-2 sm:col-span-1" />
                 </div>
 
                 {/* About */}
