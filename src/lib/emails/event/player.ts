@@ -67,7 +67,7 @@ export async function sendPaymentReceiptEmail(to: string, data: {
   await resend.emails.send({ from: FROM, to, subject: `Payment confirmed — ${data.eventTitle}`, html });
 }
 
-// ── Upcoming event reminder (24 h / 2 h) ────────────────────────────────────
+// ── Upcoming event reminder (7d / 2d / morning) ──────────────────────────────
 
 export async function sendUpcomingEventEmail(to: string, data: {
   userName: string;
@@ -77,18 +77,18 @@ export async function sendUpcomingEventEmail(to: string, data: {
   startDateTime: string;
   eventId: string;
   hoursUntil: number;
-  reminderLabel: "24h" | "2h";
+  reminderLabel: "7d" | "2d" | "morning";
 }) {
-  const is2h = data.reminderLabel === "2h";
-  const when = is2h ? "in 2 hours" : "tomorrow";
-  const urgency = is2h ? "⚡ Starting soon" : "📅 Coming up tomorrow";
-  const body = is2h
-    ? `<strong>${data.eventTitle}</strong> is starting very soon. Head over and get warmed up!`
-    : `Just a reminder that <strong>${data.eventTitle}</strong> is tomorrow. Don't forget to show up and give it your all!`;
+  const configs = {
+    "7d":      { urgency: "📅 Coming up next week", when: "in 7 days",   body: `Just a heads-up — <strong>${data.eventTitle}</strong> is one week away. Make sure you're ready!`, subject: `📅 One week away: ${data.eventTitle}` },
+    "2d":      { urgency: "📅 Almost time",          when: "in 2 days",   body: `<strong>${data.eventTitle}</strong> is just 2 days away. Start getting ready!`, subject: `📅 2 days away: ${data.eventTitle}` },
+    "morning": { urgency: "⚡ Today's the day",      when: "today",       body: `<strong>${data.eventTitle}</strong> is happening today. See you out there!`, subject: `⚡ Today: ${data.eventTitle}` },
+  };
+  const { urgency, when, body, subject } = configs[data.reminderLabel];
 
   const html = layout(`
     <p style="margin:0 0 6px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#e21d12;">${urgency}</p>
-    <h1 style="margin:0 0 24px;font-size:26px;font-weight:900;color:#18181b;line-height:1.2;">Your event starts ${when}, ${data.userName}!</h1>
+    <h1 style="margin:0 0 24px;font-size:26px;font-weight:900;color:#18181b;line-height:1.2;">Your event is ${when}, ${data.userName}!</h1>
     <p style="margin:0 0 28px;font-size:15px;color:#52525b;line-height:1.6;">${body}</p>
 
     ${detailTable(
@@ -100,10 +100,6 @@ export async function sendUpcomingEventEmail(to: string, data: {
 
     <center>${ctaButton(`${BASE_URL}/events/${data.eventId}`, "View event →")}</center>
   `);
-
-  const subject = is2h
-    ? `⚡ Starting in 2 hours: ${data.eventTitle}`
-    : `📅 Tomorrow: ${data.eventTitle}`;
 
   await resend.emails.send({ from: FROM, to, subject, html });
 }

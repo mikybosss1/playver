@@ -9,8 +9,12 @@ import { useUploadThing } from "@/lib/uploadthing";
 import type { FormFieldType, EventItem, FormField, GalleryItem, AgendaItem } from "@/app/actions/event";
 
 function splitDateTime(iso: string) {
-  const s = new Date(iso).toISOString();
-  return { date: s.slice(0, 10), time: s.slice(11, 16) };
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
 }
 
 const TIME_SLOTS = Array.from({ length: 96 }, (_, i) => {

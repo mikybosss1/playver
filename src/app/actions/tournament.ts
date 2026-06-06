@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
-import { sendTournamentMemberInviteEmail, sendJoinRequestNotificationEmail } from "@/lib/emails";
+import { sendTournamentMemberInviteEmail, sendJoinRequestNotificationEmail, sendTournamentTeamRegisteredEmail } from "@/lib/emails";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -322,6 +322,26 @@ export async function createTournamentTeam(
        VALUES ($1, $2, $3, $4, $5, 'closed', $6, $7, $8, $9, false)`,
       [teamId, tournamentId, session.user.id, teamName, status, inviteCode, paymentDeadline, playerCount, linkedTeamId]
     );
+
+    // Send registration confirmation email to captain
+    const [captainRow, tournamentRow] = await Promise.all([
+      pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [session.user.id]),
+      pool.query(`SELECT title, sport, location, "startDateTime" FROM "event" WHERE id = $1`, [tournamentId]),
+    ]);
+    const captain = captainRow.rows[0];
+    const tournament = tournamentRow.rows[0];
+    if (captain?.email && tournament) {
+      sendTournamentTeamRegisteredEmail(captain.email, {
+        captainName: captain.name ?? "Captain",
+        teamName,
+        tournamentTitle: tournament.title,
+        sport: tournament.sport,
+        location: tournament.location,
+        startDateTime: new Date(tournament.startDateTime).toISOString(),
+        tournamentId,
+        isPaid,
+      }).catch(() => {});
+    }
 
     revalidatePath(`/tournaments/${tournamentId}`);
     revalidatePath(`/dashboard/tournaments`);
