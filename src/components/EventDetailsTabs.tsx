@@ -12,11 +12,11 @@ import { JoinOpenTeamButton } from "@/components/TournamentCaptainPanel";
 type TabKey = "details" | "agenda" | "results" | "participants" | "gallery" | "teams";
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
 function formatTimeStr(hhmm: string) {

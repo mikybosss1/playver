@@ -34,9 +34,9 @@ function LocationIcon() {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 p-6">
-      <p className="text-sm font-extrabold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-4 text-2xl font-extrabold text-zinc-950">{value}</p>
+    <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 p-4 sm:p-6">
+      <p className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="mt-3 sm:mt-4 text-xl sm:text-2xl font-extrabold text-zinc-950 truncate">{value}</p>
     </div>
   );
 }
@@ -77,14 +77,14 @@ export default async function TeamDetailsPage({
     <>
       <Navbar />
       <main className="flex-1 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 overflow-x-hidden">
           <Link href="/teams" className="mb-6 inline-flex text-sm font-semibold text-[#e21d12] hover:underline">
             ← {t("back")}
           </Link>
 
           <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
             {/* Hero */}
-            <div className="relative flex min-h-72 items-center justify-center overflow-hidden px-6 py-12 bg-zinc-900">
+            <div className="relative flex min-h-52 sm:min-h-72 items-center justify-center overflow-hidden px-4 py-8 sm:px-6 sm:py-12 bg-zinc-900">
               {team.coverImageUrl ? (
                 <>
                   <Image src={team.coverImageUrl} alt={team.name} fill className="object-contain" />
@@ -96,29 +96,29 @@ export default async function TeamDetailsPage({
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(226,29,18,0.18),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(226,29,18,0.12),transparent_35%)]" />
                 </>
               )}
-              <div className="relative z-10 flex flex-col items-center text-center">
+              <div className="relative z-10 flex flex-col items-center text-center max-w-full px-2">
                 {team.logoUrl ? (
-                  <Image src={team.logoUrl} alt={team.name} width={112} height={112} className="size-28 rounded-full border-4 border-white object-cover shadow-md" />
+                  <Image src={team.logoUrl} alt={team.name} width={112} height={112} className="size-20 sm:size-28 rounded-full border-4 border-white object-cover shadow-md" />
                 ) : (
-                  <div className="flex size-28 items-center justify-center rounded-full border-4 border-white bg-white text-4xl font-extrabold text-[#e21d12] shadow-md">
+                  <div className="flex size-20 sm:size-28 items-center justify-center rounded-full border-4 border-white bg-white text-3xl sm:text-4xl font-extrabold text-[#e21d12] shadow-md">
                     {team.name[0]?.toUpperCase()}
                   </div>
                 )}
-                <p className={`mt-5 text-sm font-extrabold uppercase tracking-wide ${team.coverImageUrl ? "text-white/80" : "text-[#c32722]"}`}>{team.sport}</p>
-                <h1 className={`mt-2 text-4xl font-extrabold leading-tight ${team.coverImageUrl ? "text-white" : "text-zinc-950"}`} style={{ fontFamily: "var(--font-playfair)" }}>
+                <p className={`mt-3 sm:mt-5 text-xs sm:text-sm font-extrabold uppercase tracking-wide ${team.coverImageUrl ? "text-white/80" : "text-[#c32722]"}`}>{team.sport}</p>
+                <h1 className={`mt-2 text-2xl sm:text-4xl font-extrabold leading-tight break-words w-full ${team.coverImageUrl ? "text-white" : "text-zinc-950"}`} style={{ fontFamily: "var(--font-playfair)" }}>
                   {team.name}
                 </h1>
-                <div className={`mt-4 flex items-center gap-2 text-base font-semibold ${team.coverImageUrl ? "text-white/80" : "text-zinc-600"}`}>
+                <div className={`mt-3 sm:mt-4 flex items-center gap-2 text-sm sm:text-base font-semibold ${team.coverImageUrl ? "text-white/80" : "text-zinc-600"}`}>
                   <LocationIcon />
-                  <span>{team.location}</span>
+                  <span className="break-words">{team.location}</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-6 p-6 lg:grid-cols-[1fr_300px]">
-              <div className="grid gap-6">
+            <div className="grid gap-4 sm:gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_300px]">
+              <div className="grid gap-4 sm:gap-6 order-last lg:order-first">
                 {/* Stats */}
-                <div className="grid gap-5 sm:grid-cols-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
                   <MetricCard label={t("captain")} value={team.captainName} />
                   <MetricCard label={t("members")} value={String(team.memberCount)} />
                   <MetricCard label={t("created")} value={formatDate(team.createdAt)} />
@@ -262,7 +262,7 @@ export default async function TeamDetailsPage({
               </div>
 
               {/* Sidebar */}
-              <aside className="h-fit rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+              <aside className="h-fit rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 order-first lg:order-last">
                 <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">{t("membership")}</p>
                 <p className="mt-3 text-xl font-extrabold text-zinc-950">{team.memberCount} {t("membersLower")}</p>
                 <p className="mt-4 text-sm text-zinc-500">
