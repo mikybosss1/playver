@@ -324,6 +324,7 @@ export function TournamentMemberPanel({ team }: { team: TournamentTeam }) {
       const res = await leaveTournamentTeam(team.id);
       if (res.error) { setError(res.error); return; }
       router.refresh();
+      try { window.dispatchEvent(new CustomEvent("teamMembershipChanged", { detail: { teamId: team.id, member: false } })); } catch (e) {}
     });
   }
 
@@ -391,6 +392,9 @@ export function JoinOpenTeamButton({ teamId, tournamentId }: { teamId: string; t
       const res = await requestToJoinTeam(teamId);
       if (res.error) { setError(res.error); return; }
       setRequested(true);
+      try {
+        window.dispatchEvent(new CustomEvent("teamRequestSent", { detail: { teamId } }));
+      } catch (e) {}
       router.refresh();
     });
   }
@@ -400,6 +404,7 @@ export function JoinOpenTeamButton({ teamId, tournamentId }: { teamId: string; t
       const res = await cancelJoinRequest(requestId);
       if (res.error) { setError(res.error); return; }
       setRequested(false);
+      try { window.dispatchEvent(new CustomEvent("teamRequestCancelled", { detail: { teamId } })); } catch (e) {}
       router.refresh();
     });
   }

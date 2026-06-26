@@ -229,6 +229,7 @@
     "backToTournaments": "← Back to Tournaments",
     "tournamentBadge": "Tournament · {sport}",
     "youreOrganizer": "You're the organizer",
+    "youreSuperAdmin": "You're a super admin",
     "editTournament": "Edit Tournament",
     "signInToRegister": "Sign in to Register",
     "registrationClosed": "Registration is closed.",

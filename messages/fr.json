@@ -229,6 +229,7 @@
     "backToTournaments": "← Retour aux tournois",
     "tournamentBadge": "Tournoi · {sport}",
     "youreOrganizer": "Vous êtes l'organisateur",
+    "youreSuperAdmin": "Vous êtes super administrateur",
     "editTournament": "Modifier le tournoi",
     "signInToRegister": "Se connecter pour s'inscrire",
     "registrationClosed": "Les inscriptions sont fermées.",

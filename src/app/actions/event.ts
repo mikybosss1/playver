@@ -118,6 +118,14 @@ type EventRow = {
   participantCount: string | number;
 };
 
+function formatLocalTimestamp(value: Date | string) {
+  if (typeof value === "string") {
+    return value.includes(" ") ? value.replace(" ", "T") : value;
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+}
+
 function serializeEvent(row: EventRow) {
   const rawItems: GalleryItem[] = row.galleryItems ?? [];
   const galleryItems: GalleryItem[] = rawItems.length > 0
@@ -125,8 +133,8 @@ function serializeEvent(row: EventRow) {
     : (row.galleryUrls ?? []).map(url => ({ url, type: "image" as const }));
   return {
     ...row,
-    startDateTime: new Date(row.startDateTime).toISOString(),
-    endDateTime: new Date(row.endDateTime).toISOString(),
+    startDateTime: formatLocalTimestamp(row.startDateTime),
+    endDateTime: formatLocalTimestamp(row.endDateTime),
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
     galleryUrls: row.galleryUrls ?? [],

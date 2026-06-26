@@ -209,9 +209,48 @@ export default function EventDetailsTabs({
   const t = useTranslations("EventDetails");
   const [activeTab, setActiveTab] = useState<TabKey>("details");
   const [participants, setParticipants] = useState(initialParticipants);
+  const [teamsState, setTeamsState] = useState<TournamentTeam[] | undefined>(tournamentTeams ?? undefined);
+  const [myTeamIdState, setMyTeamIdState] = useState<string | undefined>(myTournamentTeamId ?? undefined);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    setTeamsState(tournamentTeams ?? undefined);
+  }, [tournamentTeams]);
+
+  useEffect(() => {
+    function handleMembership(e: any) {
+      try {
+        const { teamId, member } = e.detail ?? {};
+        if (!teamId || typeof member !== "boolean") return;
+        setTeamsState((prev) =>
+          prev
+            ? prev.map((t) => (t.id === teamId ? { ...t, memberCount: Math.max(0, (t.memberCount || 0) + (member ? 1 : -1)) } : t))
+            : prev
+        );
+        if (member) setMyTeamIdState(teamId);
+        else setMyTeamIdState((cur) => (cur === teamId ? undefined : cur));
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    function handleRequest(e: any) {
+      // for now we don't change counts on requests, but could mark team as having a pending request
+      // keep placeholder to allow future improvements
+      return;
+    }
+
+    window.addEventListener("teamMembershipChanged", handleMembership as EventListener);
+    window.addEventListener("teamRequestSent", handleRequest as EventListener);
+    window.addEventListener("teamRequestCancelled", handleRequest as EventListener);
+    return () => {
+      window.removeEventListener("teamMembershipChanged", handleMembership as EventListener);
+      window.removeEventListener("teamRequestSent", handleRequest as EventListener);
+      window.removeEventListener("teamRequestCancelled", handleRequest as EventListener);
+    };
+  }, []);
 
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const prevItem = useCallback(() => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i)), []);
@@ -242,7 +281,7 @@ export default function EventDetailsTabs({
     [
       { key: "details", label: t("tabDetails") },
       { key: "participants", label: t("tabParticipants") },
-      ...(tournamentTeams ? [{ key: "teams" as TabKey, label: t("tabTeams") }] : []),
+      ...(teamsState ? [{ key: "teams" as TabKey, label: t("tabTeams") }] : []),
       { key: "agenda", label: t("tabAgenda") },
       { key: "results", label: t("tabResults") },
       { key: "gallery", label: t("tabGallery") },
@@ -418,9 +457,9 @@ export default function EventDetailsTabs({
         </div>
       )}
 
-      {activeTab === "teams" && tournamentTeams && (
+      {activeTab === "teams" && teamsState && (
         <div>
-          {tournamentTeams.length === 0 ? (
+          {teamsState.length === 0 ? (
             <EmptyState
               icon={<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>}
               title={t("noTeamsYet")}
@@ -428,8 +467,8 @@ export default function EventDetailsTabs({
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {tournamentTeams.map((team) => {
-                const isMyTeam = myTournamentTeamId === team.id;
+              {teamsState.map((team) => {
+                const isMyTeam = myTeamIdState === team.id;
                 const isFull = team.memberCount >= team.playerCount;
                 const showJoin = canRequestJoin && team.recruitmentStatus === "open" && !isFull && tournamentId;
                 const cardContent = (
@@ -468,8 +507,8 @@ export default function EventDetailsTabs({
                         {t("teamPlayerCount", { current: team.memberCount, total: team.playerCount })}
                       </span>
                       {showJoin && (
-                        <JoinOpenTeamButton teamId={team.id} tournamentId={tournamentId} />
-                      )}
+                          <JoinOpenTeamButton teamId={team.id} tournamentId={tournamentId} />
+                        )}
                     </div>
                   </>
                 );
