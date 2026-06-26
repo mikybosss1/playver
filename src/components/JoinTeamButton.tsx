@@ -27,6 +27,12 @@ export default function JoinTeamButton({ teamId, isMember, joinLabel, leaveLabel
         return;
       }
       setMember(!member);
+      try {
+        // notify other UI that membership changed so they can update optimistically
+        window.dispatchEvent(new CustomEvent("teamMembershipChanged", { detail: { teamId, member: !member } }));
+      } catch (e) {
+        // ignore in SSR or environments without window
+      }
       router.refresh();
     });
   }

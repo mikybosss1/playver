@@ -149,11 +149,17 @@ export default async function EventDetailsPage({
                         {t("organizedBy")}: <span className="font-semibold text-zinc-700">{event.organizerName}</span>
                       </p>
                       <div className="mt-6 flex flex-col gap-2">
-                        {isOrganizer && (
+                        {(isOrganizer || isSuperAdmin) && (
                           <>
-                            <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
-                              {t("youreOrganizer")}
-                            </span>
+                            {isOrganizer ? (
+                              <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
+                                {t("youreOrganizer")}
+                              </span>
+                            ) : (
+                              <span className="block rounded-lg bg-zinc-100 px-4 py-3 text-center text-sm font-bold text-zinc-500">
+                                {t("youreSuperAdmin")}
+                              </span>
+                            )}
                             <Link
                               href={`/events/${event.id}/edit`}
                               className="block rounded-lg border border-zinc-200 bg-white px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
