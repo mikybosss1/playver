@@ -19,7 +19,7 @@ export default function LanguageToggle() {
         <button
           key={l}
           onClick={() => switchLocale(l)}
-          className={`px-2 py-0.5 rounded transition-all ${
+          className={`px-1.5 sm:px-2 py-0.5 rounded transition-all ${
             locale === l
               ? "bg-white shadow text-zinc-900"
               : "text-zinc-400 hover:text-zinc-600"

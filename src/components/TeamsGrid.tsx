@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import JoinTeamButton from "./JoinTeamButton";
+import LeaveTeamButton from "./LeaveTeamButton";
 import type { TeamItem } from "@/app/actions/team";
 
 interface Props {
@@ -114,13 +114,8 @@ export default function TeamsGrid({ teams, currentUserId, initialJoinedIds }: Pr
                 </div>
 
                 <div className="mt-auto">
-                  {currentUserId && !isCaptain && (isMember || team.recruitmentOpen) && (
-                    <JoinTeamButton
-                      teamId={team.id}
-                      isMember={isMember}
-                      joinLabel={t("join")}
-                      leaveLabel={t("leave")}
-                    />
+                  {currentUserId && !isCaptain && isMember && (
+                    <LeaveTeamButton teamId={team.id} leaveLabel={t("leave")} />
                   )}
                   {isCaptain && (
                     <span className="block px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#e21d12]/10 text-[#e21d12] text-center">

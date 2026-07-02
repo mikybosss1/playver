@@ -108,6 +108,7 @@
     "join": "Join Team",
     "leave": "Leave Team",
     "yourTeam": "Your Team",
+    "requestToJoinFor": "Request to join for {tournament}",
     "captainBadge": "C",
     "eventsAttending": "Events Attending",
     "noTeamEvents": "No team members are attending any events yet.",
@@ -242,7 +243,8 @@
     "teamStatusPending": "Pending",
     "teamStatusOpen": "Open",
     "teamPlayerCount": "{current} / {total} players",
-    "joinATeam": "Join a team"
+    "joinATeam": "Join a team",
+    "maxPlayersPerTeam": "Up to {max} players per team"
   },
   "TournamentPanel": {
     "teamRegistered": "Team registered",

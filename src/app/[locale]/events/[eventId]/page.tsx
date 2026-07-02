@@ -18,6 +18,21 @@ import TournamentRegisterButton from "@/components/TournamentRegisterButton";
 import { TournamentCaptainPanel, TournamentMemberPanel } from "@/components/TournamentCaptainPanel";
 import JoinTeamTabButton from "@/components/JoinTeamTabButton";
 
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+}
+
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+}
+
+// Decides the default landing tab server-side (desktop vs. mobile show different tabs
+// for tournaments) so the correct one is baked into the first render — no client-side
+// viewport check, no flash.
+function isMobileUserAgent(userAgent: string) {
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(userAgent);
+}
+
 export default async function EventDetailsPage({
   params,
   searchParams,
@@ -25,12 +40,14 @@ export default async function EventDetailsPage({
   params: Promise<{ eventId: string }>;
   searchParams: Promise<{ payment?: string }>;
 }) {
+  const requestHeaders = await headers();
   const [{ eventId }, t, session, { payment }] = await Promise.all([
     params,
     getTranslations("EventDetails"),
-    auth.api.getSession({ headers: await headers() }),
+    auth.api.getSession({ headers: requestHeaders }),
     searchParams,
   ]);
+  const isMobile = isMobileUserAgent(requestHeaders.get("user-agent") ?? "");
   const paymentSuccess = payment === "success";
   const event = await getEventById(eventId);
   if (!event) notFound();
@@ -118,18 +135,68 @@ export default async function EventDetailsPage({
                 return (
                   <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_300px]">
                     {/* Left: title */}
-                    <div className="order-last lg:order-first flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight text-zinc-950" style={{ fontFamily: "var(--font-playfair)" }}>
-                          {event.title}
-                        </h1>
-                        <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">{t("tournamentBadge", { sport: event.sport })}</p>
+                    <div className="order-last lg:order-first self-start flex flex-col gap-5">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight text-zinc-950" style={{ fontFamily: "var(--font-playfair)" }}>
+                            {event.title}
+                          </h1>
+                          <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">{t("tournamentBadge", { sport: event.sport })}</p>
+                        </div>
+                        {event.price > 0 ? (
+                          <span className="text-2xl font-extrabold text-[#e21d12] shrink-0">{formatPrice(event.price)}</span>
+                        ) : (
+                          <span className="text-2xl font-extrabold uppercase text-emerald-600 shrink-0">{t("free")}</span>
+                        )}
                       </div>
-                      {event.price > 0 ? (
-                        <span className="text-2xl font-extrabold text-[#e21d12] shrink-0">{formatPrice(event.price)}</span>
-                      ) : (
-                        <span className="text-2xl font-extrabold uppercase text-emerald-600 shrink-0">{t("free")}</span>
-                      )}
+
+                      {/* Quick facts, description & rules — shown inline on desktop only;
+                          on mobile this same content lives in the "Details" tab below to cut down on scrolling. */}
+                      <div className="hidden lg:flex lg:flex-col gap-5">
+                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-zinc-600">
+                          <span className="flex items-center gap-1.5">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[#c32722]">
+                              <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            {t("startDate")}: {formatDate(event.startDateTime)} · {formatTime(event.startDateTime)}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[#c32722]">
+                              <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            {t("endDate")}: {formatDate(event.endDateTime)} · {formatTime(event.endDateTime)}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[#c32722]">
+                              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" />
+                            </svg>
+                            {event.location}
+                          </span>
+                          {event.maxPlayersPerTeam && (
+                            <span className="flex items-center gap-1.5">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[#c32722]">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                              </svg>
+                              {t("maxPlayersPerTeam", { max: event.maxPlayersPerTeam })}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid gap-6 sm:grid-cols-2">
+                          <section>
+                            <h2 className="mb-2 text-lg font-extrabold text-zinc-950">{t("description")}</h2>
+                            <p className="whitespace-pre-line break-words text-base leading-7 text-zinc-600">
+                              {event.description || t("noDescription")}
+                            </p>
+                          </section>
+                          <section>
+                            <h2 className="mb-2 text-lg font-extrabold text-zinc-950">{t("rules")}</h2>
+                            <p className="whitespace-pre-line break-words text-base leading-7 text-zinc-600">
+                              {event.rules || t("noRules")}
+                            </p>
+                          </section>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Right: registration sidebar */}
@@ -273,6 +340,8 @@ export default async function EventDetailsPage({
             participants={participants}
             isSuperAdmin={isSuperAdmin}
             hideTabs={isTournament ? ["participants"] : []}
+            desktopHideTabs={isTournament ? ["details"] : []}
+            initialTab={isTournament ? (isMobile ? "details" : "teams") : undefined}
             tournamentTeams={isTournament ? teams : undefined}
             myTournamentTeamId={myTeam?.id}
             canRequestJoin={!!(session && !myTeam && !isEnded)}
