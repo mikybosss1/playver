@@ -9,7 +9,7 @@ import type { TournamentTeam } from "@/app/actions/tournament";
 import { adminRemoveParticipant } from "@/app/actions/admin";
 import { JoinOpenTeamButton } from "@/components/TournamentCaptainPanel";
 
-type TabKey = "details" | "agenda" | "results" | "participants" | "gallery" | "teams";
+export type TabKey = "details" | "agenda" | "results" | "participants" | "gallery" | "teams";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
@@ -192,6 +192,8 @@ export default function EventDetailsTabs({
   participants: initialParticipants,
   isSuperAdmin = false,
   hideTabs = [],
+  desktopHideTabs = [],
+  initialTab,
   tournamentTeams,
   myTournamentTeamId,
   canRequestJoin = false,
@@ -201,13 +203,19 @@ export default function EventDetailsTabs({
   participants: EventParticipant[];
   isSuperAdmin?: boolean;
   hideTabs?: TabKey[];
+  /** Tabs whose button is hidden at the lg breakpoint and up (e.g. content that's shown inline on desktop instead). Still reachable on smaller screens. */
+  desktopHideTabs?: TabKey[];
+  /** Tab to land on, decided server-side (e.g. from the request's User-Agent) so desktop and mobile can land on different tabs with no client-side flash. */
+  initialTab?: TabKey;
   tournamentTeams?: TournamentTeam[];
   myTournamentTeamId?: string;
   canRequestJoin?: boolean;
   tournamentId?: string;
 }) {
   const t = useTranslations("EventDetails");
-  const [activeTab, setActiveTab] = useState<TabKey>("details");
+  const defaultTabOrder: TabKey[] = ["details", "participants", "teams", "agenda", "results", "gallery"];
+  const fallbackDefaultTab = defaultTabOrder.find((key) => !hideTabs.includes(key) && !desktopHideTabs.includes(key)) ?? "details";
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? fallbackDefaultTab);
   const [participants, setParticipants] = useState(initialParticipants);
   const [teamsState, setTeamsState] = useState<TournamentTeam[] | undefined>(tournamentTeams ?? undefined);
   const [myTeamIdState, setMyTeamIdState] = useState<string | undefined>(myTournamentTeamId ?? undefined);
@@ -298,9 +306,11 @@ export default function EventDetailsTabs({
             type="button"
             onClick={() => setActiveTab(tab.key)}
             className={`min-w-fit px-8 pb-4 text-base font-extrabold uppercase tracking-[0.12em] transition-colors ${
+              desktopHideTabs.includes(tab.key) ? "lg:hidden" : ""
+            } ${
               activeTab === tab.key
                 ? "border-b-[3px] border-[#c32722] text-[#b72a25]"
-                : "border-b-[3px] border-transparent text-zinc-500 hover:text-zinc-800"
+                : "border-b-[3px] border-white text-zinc-500 hover:text-zinc-800"
             }`}
           >
             {tab.label}
@@ -309,7 +319,7 @@ export default function EventDetailsTabs({
       </div>
 
       {activeTab === "details" && (
-        <div className="grid gap-8">
+        <div className={`grid gap-8 ${desktopHideTabs.includes("details") ? "lg:hidden" : ""}`}>
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard icon={<span>▣</span>} label={t("startDate")} value={`${formatDate(event.startDateTime)} · ${formatTime(event.startDateTime)}`} />
             <MetricCard icon={<span>▣</span>} label={t("endDate")} value={`${formatDate(event.endDateTime)} · ${formatTime(event.endDateTime)}`} />

@@ -193,6 +193,53 @@ export async function getPendingJoinRequests(teamId: string): Promise<Tournament
   }));
 }
 
+export type LinkedTeamJoinRequest = {
+  id: string;
+  tournamentTeamId: string;
+  userId: string;
+  userName: string;
+  userImage: string | null;
+  status: "pending";
+  createdAt: string;
+  tournamentTitle: string;
+};
+
+// Pending join requests across all of this (regular) team's tournament registrations
+// that the current session user captains — so requests can be reviewed from the
+// team's own page, not just from inside each tournament.
+export async function getPendingJoinRequestsForLinkedTeam(linkedTeamId: string): Promise<LinkedTeamJoinRequest[]> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return [];
+  await ensureTournamentTables();
+
+  const res = await pool.query(
+    `SELECT tjr.id, tjr."teamId", tjr."userId", tjr.status, tjr."createdAt",
+            u.name as "userName", u.image as "userImage",
+            e.title as "tournamentTitle"
+     FROM "tournament_join_request" tjr
+     JOIN "user" u ON u.id = tjr."userId"
+     JOIN "tournament_team" tt ON tt.id = tjr."teamId"
+     JOIN "event" e ON e.id = tt."tournamentId"
+     WHERE tt."linkedTeamId" = $1 AND tt."captainId" = $2 AND tjr.status = 'pending'
+     ORDER BY tjr."createdAt" ASC`,
+    [linkedTeamId, session.user.id]
+  );
+
+  return res.rows.map((r: {
+    id: string; teamId: string; userId: string; userName: string;
+    userImage: string | null; status: string; createdAt: Date; tournamentTitle: string;
+  }) => ({
+    id: r.id,
+    tournamentTeamId: r.teamId,
+    userId: r.userId,
+    userName: r.userName,
+    userImage: r.userImage,
+    status: r.status as "pending",
+    createdAt: new Date(r.createdAt).toISOString(),
+    tournamentTitle: r.tournamentTitle,
+  }));
+}
+
 export async function getUserJoinRequestForTeam(teamId: string): Promise<TournamentJoinRequest | null> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
@@ -217,6 +264,51 @@ export async function getUserJoinRequestForTeam(teamId: string): Promise<Tournam
     status: r.status as "pending",
     createdAt: new Date(r.createdAt).toISOString(),
   };
+}
+
+export type JoinableTournamentRegistration = {
+  tournamentTeamId: string;
+  tournamentId: string;
+  tournamentTitle: string;
+};
+
+// Open tournament registrations for this (regular) team that the current session
+// user could request to join right now — used to surface "Request to Join" on the
+// team's own page, not just inside the tournament's Teams tab.
+export async function getJoinableTournamentRegistrations(linkedTeamId: string): Promise<JoinableTournamentRegistration[]> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return [];
+  await ensureTournamentTables();
+
+  const rows = await pool.query(
+    `SELECT tt.id, tt."tournamentId", tt."playerCount", tt."captainId", e.title
+     FROM "tournament_team" tt
+     JOIN "event" e ON e.id = tt."tournamentId"
+     WHERE tt."linkedTeamId" = $1 AND tt."recruitmentStatus" = 'open' AND e."endDateTime" >= NOW()`,
+    [linkedTeamId]
+  );
+
+  const results: JoinableTournamentRegistration[] = [];
+  for (const row of rows.rows as { id: string; tournamentId: string; playerCount: number; captainId: string; title: string }[]) {
+    if (row.captainId === session.user.id) continue;
+
+    const existingTeam = await pool.query(
+      `SELECT tt2.id FROM "tournament_team" tt2
+       LEFT JOIN "tournament_team_member" ttm ON ttm."teamId" = tt2.id AND ttm."userId" = $1
+       WHERE tt2."tournamentId" = $2 AND (tt2."captainId" = $1 OR ttm."userId" = $1)`,
+      [session.user.id, row.tournamentId]
+    );
+    if (existingTeam.rows.length > 0) continue;
+
+    const memberCount = await pool.query(
+      `SELECT COUNT(*) FROM "tournament_team_member" WHERE "teamId" = $1 AND "confirmationStatus" != 'declined'`,
+      [row.id]
+    );
+    if (Number(memberCount.rows[0].count) + 1 >= row.playerCount) continue;
+
+    results.push({ tournamentTeamId: row.id, tournamentId: row.tournamentId, tournamentTitle: row.title });
+  }
+  return results;
 }
 
 export async function getMyTeamOptions(): Promise<MyTeamOption[]> {
@@ -343,7 +435,7 @@ export async function createTournamentTeam(
       }).catch(() => {});
     }
 
-    revalidatePath(`/tournaments/${tournamentId}`);
+    revalidatePath(`/events/${tournamentId}`);
     revalidatePath(`/dashboard/tournaments`);
     revalidatePath("/teams");
     revalidatePath("/dashboard/teams");
@@ -432,7 +524,7 @@ export async function importExistingTeamForTournament(
       }
     }
 
-    revalidatePath(`/tournaments/${tournamentId}`);
+    revalidatePath(`/events/${tournamentId}`);
     revalidatePath(`/dashboard/tournaments`);
     return { teamId, inviteCode };
   } catch (e) {
@@ -460,7 +552,7 @@ export async function confirmTournamentMembership(token: string): Promise<{ erro
       [row.id]
     );
 
-    revalidatePath(`/tournaments/${row.tournamentId}`);
+    revalidatePath(`/events/${row.tournamentId}`);
     return { tournamentId: row.tournamentId, teamName: row.teamName };
   } catch (e) {
     console.error("[confirmTournamentMembership]", e);
@@ -487,7 +579,7 @@ export async function declineTournamentMembership(token: string): Promise<{ erro
       [row.id]
     );
 
-    revalidatePath(`/tournaments/${row.tournamentId}`);
+    revalidatePath(`/events/${row.tournamentId}`);
     return { tournamentId: row.tournamentId, teamName: row.teamName };
   } catch (e) {
     console.error("[declineTournamentMembership]", e);
@@ -542,7 +634,7 @@ export async function toggleTeamRecruitment(teamId: string): Promise<{ error?: s
     const newStatus = res.rows[0].recruitmentStatus === "open" ? "closed" : "open";
     await pool.query(`UPDATE "tournament_team" SET "recruitmentStatus" = $1 WHERE id = $2`, [newStatus, teamId]);
 
-    revalidatePath(`/tournaments/${res.rows[0].tournamentId}`);
+    revalidatePath(`/events/${res.rows[0].tournamentId}`);
     return { newStatus };
   } catch (e) {
     console.error("[toggleTeamRecruitment]", e);
@@ -602,7 +694,7 @@ export async function requestToJoinTeam(teamId: string): Promise<{ error?: strin
       }
     }
 
-    revalidatePath(`/tournaments/${team.tournamentId}`);
+    revalidatePath(`/events/${team.tournamentId}`);
     return {};
   } catch (e) {
     console.error("[requestToJoinTeam]", e);
@@ -658,7 +750,8 @@ export async function respondToJoinRequest(requestId: string, accept: boolean): 
       [accept ? "accepted" : "rejected", requestId]
     );
 
-    revalidatePath(`/tournaments/${req.tournamentId}`);
+    revalidatePath(`/events/${req.tournamentId}`);
+    if (req.linkedTeamId) revalidatePath(`/teams/${req.linkedTeamId}`);
     return {};
   } catch (e) {
     console.error("[respondToJoinRequest]", e);
@@ -735,7 +828,7 @@ export async function joinTeamViaInvite(inviteCode: string): Promise<{ error?: s
       revalidatePath("/dashboard/teams");
     }
 
-    revalidatePath(`/tournaments/${team.tournamentId}`);
+    revalidatePath(`/events/${team.tournamentId}`);
     return { tournamentId: team.tournamentId };
   } catch (e) {
     console.error("[joinTeamViaInvite]", e);
@@ -769,7 +862,7 @@ export async function removeTeamMember(teamId: string, memberId: string): Promis
       revalidatePath("/teams");
     }
 
-    revalidatePath(`/tournaments/${teamRes.rows[0].tournamentId}`);
+    revalidatePath(`/events/${teamRes.rows[0].tournamentId}`);
     return {};
   } catch (e) {
     console.error("[removeTeamMember]", e);
@@ -802,7 +895,7 @@ export async function leaveTournamentTeam(teamId: string): Promise<{ error?: str
         revalidatePath("/teams");
         revalidatePath("/dashboard/teams");
       }
-      revalidatePath(`/tournaments/${teamRes.rows[0].tournamentId}`);
+      revalidatePath(`/events/${teamRes.rows[0].tournamentId}`);
     }
     return {};
   } catch (e) {
@@ -832,7 +925,7 @@ export async function disbandTournamentTeam(teamId: string): Promise<{ error?: s
       revalidatePath("/dashboard/teams");
     }
 
-    revalidatePath(`/tournaments/${teamRes.rows[0].tournamentId}`);
+    revalidatePath(`/events/${teamRes.rows[0].tournamentId}`);
     revalidatePath(`/dashboard/tournaments`);
     return {};
   } catch (e) {
@@ -851,7 +944,6 @@ export async function activateTournamentTeam(teamId: string): Promise<{ error?: 
       [teamId]
     );
     if (res.rows[0]) {
-      revalidatePath(`/tournaments/${res.rows[0].tournamentId}`);
       revalidatePath(`/events/${res.rows[0].tournamentId}`);
     }
     return {};

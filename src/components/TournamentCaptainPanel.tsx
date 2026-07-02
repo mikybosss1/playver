@@ -159,8 +159,8 @@ export function TournamentCaptainPanel({
         </div>
       </div>
 
-      {/* Three-column grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Stacked sections — this panel only ever renders inside a narrow sidebar */}
+      <div className="flex flex-col gap-4">
 
         {/* Col 1: Team roster */}
         <div className="rounded-xl border border-zinc-200 p-4 flex flex-col gap-2">
@@ -211,11 +211,6 @@ export function TournamentCaptainPanel({
                     <p className="text-[10px] font-semibold text-red-500">{t("memberDeclined")}</p>
                   )}
                 </div>
-                {m.confirmationStatus === "confirmed" && (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
                 <button
                   type="button"
                   onClick={() => handleRemoveMember(m.userId)}
@@ -386,7 +381,11 @@ export function JoinOpenTeamButton({ teamId, tournamentId }: { teamId: string; t
   const [requested, setRequested] = useState(false);
   const router = useRouter();
 
-  function handleRequest() {
+  function handleRequest(e: React.MouseEvent) {
+    // This button can render inside a team-card <Link> (to the linked team page) —
+    // stop the click from also triggering that navigation.
+    e.preventDefault();
+    e.stopPropagation();
     startTransition(async () => {
       setError("");
       const res = await requestToJoinTeam(teamId);
@@ -399,7 +398,9 @@ export function JoinOpenTeamButton({ teamId, tournamentId }: { teamId: string; t
     });
   }
 
-  function handleCancel(requestId: string) {
+  function handleCancel(e: React.MouseEvent, requestId: string) {
+    e.preventDefault();
+    e.stopPropagation();
     startTransition(async () => {
       const res = await cancelJoinRequest(requestId);
       if (res.error) { setError(res.error); return; }
@@ -415,7 +416,7 @@ export function JoinOpenTeamButton({ teamId, tournamentId }: { teamId: string; t
         <p className="text-xs text-zinc-500 mb-1">{t("requestSent")}</p>
         <button
           type="button"
-          onClick={() => handleCancel("")}
+          onClick={(e) => handleCancel(e, "")}
           disabled={isPending}
           className="text-xs font-semibold text-red-500 hover:text-red-700 disabled:opacity-50"
         >

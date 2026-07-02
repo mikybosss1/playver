@@ -108,6 +108,7 @@
     "join": "Rejoindre",
     "leave": "Quitter",
     "yourTeam": "Votre équipe",
+    "requestToJoinFor": "Demander à rejoindre pour {tournament}",
     "captainBadge": "C",
     "eventsAttending": "Événements à venir",
     "noTeamEvents": "Aucun membre de l'équipe ne participe à un événement pour l'instant.",
@@ -242,7 +243,8 @@
     "teamStatusPending": "En attente",
     "teamStatusOpen": "Ouvert",
     "teamPlayerCount": "{current} / {total} joueurs",
-    "joinATeam": "Rejoindre une équipe"
+    "joinATeam": "Rejoindre une équipe",
+    "maxPlayersPerTeam": "Jusqu'à {max} joueurs par équipe"
   },
   "TournamentPanel": {
     "teamRegistered": "Équipe inscrite",

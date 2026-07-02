@@ -4,13 +4,15 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import JoinTeamButton from "@/components/JoinTeamButton";
-import TeamRecruitmentToggle from "@/components/TeamRecruitmentToggle";
+import LeaveTeamButton from "@/components/LeaveTeamButton";
 import RemoveTeamMemberButton from "@/components/RemoveTeamMemberButton";
+import { JoinOpenTeamButton } from "@/components/TournamentCaptainPanel";
+import TeamJoinRequests from "@/components/TeamJoinRequests";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getMembershipMap, getTeamById, getTeamMembers } from "@/app/actions/team";
 import { getTeamEvents } from "@/app/actions/event";
+import { getJoinableTournamentRegistrations, getPendingJoinRequestsForLinkedTeam } from "@/app/actions/tournament";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
@@ -34,7 +36,7 @@ function LocationIcon() {
 
 function MetricCard({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
-    <div className={`rounded-[18px] border border-zinc-200 bg-zinc-50 p-4 sm:p-6 ${className ?? ""}`}>
+    <div className={`min-w-0 rounded-[18px] border border-zinc-200 bg-zinc-50 p-4 sm:p-6 ${className ?? ""}`}>
       <p className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-zinc-500">{label}</p>
       <p className="mt-3 sm:mt-4 text-xl sm:text-2xl font-extrabold text-zinc-950 truncate">{value}</p>
     </div>
@@ -55,13 +57,15 @@ export default async function TeamDetailsPage({
   const team = await getTeamById(teamId);
   if (!team) notFound();
 
-  const [members, membershipSet, teamEvents] = await Promise.all([
+  const isCaptain = session?.user?.id === team.captainId;
+
+  const [members, membershipSet, teamEvents, joinableRegistrations, pendingJoinRequests] = await Promise.all([
     getTeamMembers(team.id),
     session ? getMembershipMap([team.id]) : Promise.resolve(new Set<string>()),
     getTeamEvents(team.id),
+    session && !isCaptain ? getJoinableTournamentRegistrations(team.id) : Promise.resolve([]),
+    isCaptain ? getPendingJoinRequestsForLinkedTeam(team.id) : Promise.resolve([]),
   ]);
-
-  const isCaptain = session?.user?.id === team.captainId;
 
   // Captain always first
   const sortedMembers = [
@@ -116,22 +120,22 @@ export default async function TeamDetailsPage({
             </div>
 
             <div className="grid gap-4 sm:gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_300px]">
-              <div className="grid gap-4 sm:gap-6 order-last lg:order-first">
+              <div className="min-w-0 grid gap-4 sm:gap-6 order-last lg:order-first">
                 {/* Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
+                <div className="min-w-0 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
                   <MetricCard label={t("captain")} value={team.captainName} />
                   <MetricCard label={t("members")} value={String(team.memberCount)} />
                   <MetricCard label={t("created")} value={formatDate(team.createdAt)} className="col-span-2 sm:col-span-1" />
                 </div>
 
                 {/* About */}
-                <section>
+                <section className="min-w-0">
                   <h2 className="mb-3 text-xl font-extrabold text-zinc-950">{t("about")}</h2>
-                  <p className="whitespace-pre-line text-base leading-7 text-zinc-600">{team.bio || t("noBio")}</p>
+                  <p className="whitespace-pre-line break-words text-base leading-7 text-zinc-600">{team.bio || t("noBio")}</p>
                 </section>
 
                 {/* Roster */}
-                <section>
+                <section className="min-w-0">
                   <h2 className="mb-4 text-xl font-extrabold text-zinc-950">{t("roster")}</h2>
                   {sortedMembers.length === 0 ? (
                     <div className="rounded-[18px] border-2 border-dashed border-zinc-200 py-16 text-center">
@@ -145,7 +149,7 @@ export default async function TeamDetailsPage({
                         return (
                           <div
                             key={member.id}
-                            className={`group flex items-center gap-4 rounded-2xl border bg-white p-4 transition-shadow hover:shadow-md ${
+                            className={`min-w-0 group flex items-center gap-4 rounded-2xl border bg-white p-4 transition-shadow hover:shadow-md ${
                               isTheCaptain
                                 ? "border-[#e21d12]/40 ring-2 ring-[#e21d12]/20"
                                 : "border-zinc-200"
@@ -190,7 +194,7 @@ export default async function TeamDetailsPage({
                 </section>
 
                 {/* Events Attending */}
-                <section>
+                <section className="min-w-0">
                   <h2 className="mb-4 text-xl font-extrabold text-zinc-950">{t("eventsAttending")}</h2>
 
                   {upcomingEvents.length === 0 && pastEvents.length === 0 ? (
@@ -207,7 +211,7 @@ export default async function TeamDetailsPage({
                               <Link
                                 key={event.id}
                                 href={`/events/${event.id}`}
-                                className="group flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 hover:shadow-md transition-shadow"
+                                className="min-w-0 group flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 hover:shadow-md transition-shadow"
                               >
                                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#e21d12]/8 text-xl">
                                   {sportEmoji(event.sport)}
@@ -236,7 +240,7 @@ export default async function TeamDetailsPage({
                               <Link
                                 key={event.id}
                                 href={`/events/${event.id}`}
-                                className="group flex items-start gap-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4 hover:shadow-md transition-shadow"
+                                className="min-w-0 group flex items-start gap-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4 hover:shadow-md transition-shadow"
                               >
                                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-zinc-200 text-xl">
                                   {sportEmoji(event.sport)}
@@ -262,7 +266,7 @@ export default async function TeamDetailsPage({
               </div>
 
               {/* Sidebar */}
-              <aside className="h-fit rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 order-first lg:order-last">
+              <aside className="min-w-0 h-fit rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 order-first lg:order-last">
                 <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">{t("membership")}</p>
                 <p className="mt-3 text-xl font-extrabold text-zinc-950">{team.memberCount} {t("membersLower")}</p>
                 <p className="mt-4 text-sm text-zinc-500">
@@ -274,16 +278,20 @@ export default async function TeamDetailsPage({
                       <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
                         {t("yourTeam")}
                       </span>
-                      <TeamRecruitmentToggle teamId={team.id} initialOpen={team.recruitmentOpen} />
+                      <TeamJoinRequests requests={pendingJoinRequests} />
                     </>
-                  ) : session && (team.recruitmentOpen || membershipSet.has(team.id)) ? (
-                    <JoinTeamButton
-                      teamId={team.id}
-                      isMember={membershipSet.has(team.id)}
-                      joinLabel={t("join")}
-                      leaveLabel={t("leave")}
-                    />
+                  ) : session && membershipSet.has(team.id) ? (
+                    <LeaveTeamButton teamId={team.id} leaveLabel={t("leave")} />
                   ) : null}
+
+                  {joinableRegistrations.map((reg) => (
+                    <div key={reg.tournamentTeamId} className="rounded-lg border border-zinc-200 bg-white p-3">
+                      <p className="mb-2 text-xs text-zinc-500">
+                        {t("requestToJoinFor", { tournament: reg.tournamentTitle })}
+                      </p>
+                      <JoinOpenTeamButton teamId={reg.tournamentTeamId} tournamentId={reg.tournamentId} />
+                    </div>
+                  ))}
                 </div>
               </aside>
             </div>

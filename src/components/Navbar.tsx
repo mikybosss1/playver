@@ -49,7 +49,7 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 shrink-0">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-3 shrink-0">
           <LanguageToggle />
 
           {firstName ? (
