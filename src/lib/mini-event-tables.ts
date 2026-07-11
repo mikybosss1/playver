@@ -10,12 +10,14 @@ export async function ensureMiniEventTables() {
         "tournamentId"  text NOT NULL REFERENCES "event"("id") ON DELETE CASCADE,
         "title"         text NOT NULL,
         "court"         text,
+        "notes"         text,
         "scheduledTime" timestamptz NOT NULL,
         "status"        text NOT NULL DEFAULT 'scheduled',
         "createdAt"     timestamptz NOT NULL DEFAULT NOW(),
         "updatedAt"     timestamptz NOT NULL DEFAULT NOW()
       )
     `);
+    await pool.query(`ALTER TABLE "mini_event" ADD COLUMN IF NOT EXISTS "notes" text`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "mini_event_result" (
         "id"          text PRIMARY KEY,

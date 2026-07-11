@@ -8,9 +8,9 @@ import { Link } from "@/i18n/routing";
 import type { EventItem, EventParticipant, GalleryItem } from "@/app/actions/event";
 import type { TournamentTeam } from "@/app/actions/tournament";
 import type { Game, GameDetail } from "@/app/actions/game";
-import { getGameDetail, deleteGame } from "@/app/actions/game";
+import { getGameDetail, deleteGame, clearGameResult } from "@/app/actions/game";
 import type { MiniEvent, MiniEventDetail, TournamentPlayer } from "@/app/actions/miniEvent";
-import { getMiniEventDetail, deleteMiniEvent } from "@/app/actions/miniEvent";
+import { getMiniEventDetail, deleteMiniEvent, clearMiniEventResult } from "@/app/actions/miniEvent";
 import { adminRemoveParticipant } from "@/app/actions/admin";
 import { JoinOpenTeamButton } from "@/components/TournamentCaptainPanel";
 import GameFormModal from "@/components/GameFormModal";
@@ -114,9 +114,11 @@ function GameEntryCard({
   isLoadingResult,
   isLoadingStats,
   isDeleting,
+  isClearing,
   onEnterResult,
   onViewResult,
   onDelete,
+  onClearResult,
   t,
 }: {
   game: Game;
@@ -124,9 +126,11 @@ function GameEntryCard({
   isLoadingResult: boolean;
   isLoadingStats: boolean;
   isDeleting: boolean;
+  isClearing: boolean;
   onEnterResult: () => void;
   onViewResult: () => void;
   onDelete: () => void;
+  onClearResult: () => void;
   t: (key: string) => string;
 }) {
   const isFinal = game.status === "final";
@@ -157,6 +161,9 @@ function GameEntryCard({
           {isFinal && (
             <p className="mt-1 text-lg font-extrabold text-zinc-700">{game.homeScore} – {game.awayScore}</p>
           )}
+          {game.notes && (
+            <p className="mt-2 whitespace-pre-line text-sm text-zinc-500">{game.notes}</p>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           {canManage && (
@@ -169,6 +176,16 @@ function GameEntryCard({
               >
                 {isLoadingResult ? "..." : isFinal ? t("editResult") : t("enterResult")}
               </button>
+              {isFinal && (
+                <button
+                  type="button"
+                  onClick={onClearResult}
+                  disabled={isClearing}
+                  className="text-xs font-semibold text-zinc-500 hover:underline disabled:opacity-50"
+                >
+                  {isClearing ? "..." : t("clearResult")}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onDelete}
@@ -201,9 +218,11 @@ function MiniEventEntryCard({
   isLoadingResult,
   isLoadingResults,
   isDeleting,
+  isClearing,
   onEnterResult,
   onViewResults,
   onDelete,
+  onClearResult,
   t,
 }: {
   miniEvent: MiniEvent;
@@ -211,9 +230,11 @@ function MiniEventEntryCard({
   isLoadingResult: boolean;
   isLoadingResults: boolean;
   isDeleting: boolean;
+  isClearing: boolean;
   onEnterResult: () => void;
   onViewResults: () => void;
   onDelete: () => void;
+  onClearResult: () => void;
   t: (key: string) => string;
 }) {
   const isFinal = miniEvent.status === "final";
@@ -237,6 +258,9 @@ function MiniEventEntryCard({
             )}
           </div>
           <h3 className="mt-2 text-2xl font-extrabold text-zinc-950">{miniEvent.title}</h3>
+          {miniEvent.notes && (
+            <p className="mt-2 whitespace-pre-line text-sm text-zinc-500">{miniEvent.notes}</p>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           {canManage && (
@@ -249,6 +273,16 @@ function MiniEventEntryCard({
               >
                 {isLoadingResult ? "..." : isFinal ? t("editResult") : t("enterResult")}
               </button>
+              {isFinal && (
+                <button
+                  type="button"
+                  onClick={onClearResult}
+                  disabled={isClearing}
+                  className="text-xs font-semibold text-zinc-500 hover:underline disabled:opacity-50"
+                >
+                  {isClearing ? "..." : t("clearResult")}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onDelete}
@@ -465,12 +499,14 @@ export default function EventDetailsTabs({
   const [statsModalDetail, setStatsModalDetail] = useState<GameDetail | null>(null);
   const [loadingGameId, setLoadingGameId] = useState<string | null>(null);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
+  const [clearingGameId, setClearingGameId] = useState<string | null>(null);
   const [miniEventsState, setMiniEventsState] = useState<MiniEvent[] | undefined>(initialMiniEvents);
   const [miniEventFormOpen, setMiniEventFormOpen] = useState(false);
   const [miniEventResultModalDetail, setMiniEventResultModalDetail] = useState<MiniEventDetail | null>(null);
   const [miniEventResultsModalDetail, setMiniEventResultsModalDetail] = useState<MiniEventDetail | null>(null);
   const [loadingMiniEventId, setLoadingMiniEventId] = useState<string | null>(null);
   const [deletingMiniEventId, setDeletingMiniEventId] = useState<string | null>(null);
+  const [clearingMiniEventId, setClearingMiniEventId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -541,6 +577,18 @@ export default function EventDetailsTabs({
     });
   }
 
+  function handleClearGameResult(gameId: string) {
+    if (!window.confirm(t("clearResultConfirm"))) return;
+    setClearingGameId(gameId);
+    startTransition(async () => {
+      await clearGameResult(gameId);
+      setGamesState((prev) =>
+        prev?.map((g) => (g.id === gameId ? { ...g, status: "scheduled", homeScore: null, awayScore: null } : g))
+      );
+      setClearingGameId(null);
+    });
+  }
+
   async function openMiniEventResultModal(miniEventId: string) {
     setLoadingMiniEventId(miniEventId);
     try {
@@ -577,6 +625,16 @@ export default function EventDetailsTabs({
       await deleteMiniEvent(miniEventId);
       setMiniEventsState((prev) => prev?.filter((m) => m.id !== miniEventId));
       setDeletingMiniEventId(null);
+    });
+  }
+
+  function handleClearMiniEventResult(miniEventId: string) {
+    if (!window.confirm(t("clearResultConfirm"))) return;
+    setClearingMiniEventId(miniEventId);
+    startTransition(async () => {
+      await clearMiniEventResult(miniEventId);
+      setMiniEventsState((prev) => prev?.map((m) => (m.id === miniEventId ? { ...m, status: "scheduled" } : m)));
+      setClearingMiniEventId(null);
     });
   }
 
@@ -847,9 +905,11 @@ export default function EventDetailsTabs({
                     isLoadingResult={loadingGameId === entry.game.id}
                     isLoadingStats={loadingGameId === entry.game.id}
                     isDeleting={deletingGameId === entry.game.id}
+                    isClearing={clearingGameId === entry.game.id}
                     onEnterResult={() => openResultModal(entry.game.id)}
                     onViewResult={() => openStatsModal(entry.game.id)}
                     onDelete={() => handleDeleteGame(entry.game.id)}
+                    onClearResult={() => handleClearGameResult(entry.game.id)}
                     t={t}
                   />
                 ) : entry.type === "miniEvent" ? (
@@ -860,9 +920,11 @@ export default function EventDetailsTabs({
                     isLoadingResult={loadingMiniEventId === entry.miniEvent.id}
                     isLoadingResults={loadingMiniEventId === entry.miniEvent.id}
                     isDeleting={deletingMiniEventId === entry.miniEvent.id}
+                    isClearing={clearingMiniEventId === entry.miniEvent.id}
                     onEnterResult={() => openMiniEventResultModal(entry.miniEvent.id)}
                     onViewResults={() => openMiniEventResultsModal(entry.miniEvent.id)}
                     onDelete={() => handleDeleteMiniEvent(entry.miniEvent.id)}
+                    onClearResult={() => handleClearMiniEventResult(entry.miniEvent.id)}
                     t={t}
                   />
                 ) : (

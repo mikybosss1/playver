@@ -31,6 +31,7 @@ export default function GameFormModal({
   const [scheduledTime, setScheduledTime] = useState(() => toLocalInputValue(game?.scheduledTime));
   const [court, setCourt] = useState(game?.court ?? "");
   const [round, setRound] = useState(game?.round ?? "");
+  const [notes, setNotes] = useState(game?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -52,6 +53,7 @@ export default function GameFormModal({
         scheduledTime: new Date(scheduledTime).toISOString(),
         court: court.trim() || undefined,
         round: round.trim() || undefined,
+        notes: notes.trim() || undefined,
       };
       const result = game ? await updateGame(game.id, payload) : await createGame(tournamentId, payload);
       if (result.error) {
@@ -140,6 +142,17 @@ export default function GameFormModal({
                 />
               </label>
             </div>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wide text-zinc-500">{t("notes")}</span>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t("notesPlaceholder")}
+                rows={3}
+                className="resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-red-200"
+              />
+            </label>
 
             {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
           </div>

@@ -31,6 +31,7 @@ export type Game = {
   awayTeamName: string;
   court: string | null;
   round: string | null;
+  notes: string | null;
   scheduledTime: string;
   status: GameStatus;
   homeScore: number | null;
@@ -72,6 +73,7 @@ type GameRow = {
   awayTeamName: string;
   court: string | null;
   round: string | null;
+  notes: string | null;
   scheduledTime: Date | string;
   status: string;
   homeScore: number | null;
@@ -101,6 +103,7 @@ function mapGameRow(row: GameRow): Game {
     awayTeamName: row.awayTeamName,
     court: row.court,
     round: row.round,
+    notes: row.notes,
     scheduledTime: new Date(row.scheduledTime).toISOString(),
     status: row.status as GameStatus,
     homeScore: row.homeScore,
@@ -244,7 +247,7 @@ export async function getAthleteGameHistory(userId: string): Promise<AthleteGame
 
 export async function createGame(
   tournamentId: string,
-  data: { homeTeamId: string; awayTeamId: string; scheduledTime: string; court?: string; round?: string }
+  data: { homeTeamId: string; awayTeamId: string; scheduledTime: string; court?: string; round?: string; notes?: string }
 ): Promise<{ error?: string; gameId?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -257,9 +260,9 @@ export async function createGame(
 
     const id = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO "game" (id, "tournamentId", "homeTeamId", "awayTeamId", court, round, "scheduledTime")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, tournamentId, data.homeTeamId, data.awayTeamId, data.court || null, data.round || null, data.scheduledTime]
+      `INSERT INTO "game" (id, "tournamentId", "homeTeamId", "awayTeamId", court, round, notes, "scheduledTime")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, tournamentId, data.homeTeamId, data.awayTeamId, data.court || null, data.round || null, data.notes || null, data.scheduledTime]
     );
 
     revalidatePath(`/events/${tournamentId}`);
@@ -272,7 +275,7 @@ export async function createGame(
 
 export async function updateGame(
   gameId: string,
-  data: { homeTeamId: string; awayTeamId: string; scheduledTime: string; court?: string; round?: string }
+  data: { homeTeamId: string; awayTeamId: string; scheduledTime: string; court?: string; round?: string; notes?: string }
 ): Promise<{ error?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -288,9 +291,9 @@ export async function updateGame(
 
     await pool.query(
       `UPDATE "game"
-       SET "homeTeamId" = $1, "awayTeamId" = $2, "scheduledTime" = $3, court = $4, round = $5, "updatedAt" = NOW()
-       WHERE id = $6`,
-      [data.homeTeamId, data.awayTeamId, data.scheduledTime, data.court || null, data.round || null, gameId]
+       SET "homeTeamId" = $1, "awayTeamId" = $2, "scheduledTime" = $3, court = $4, round = $5, notes = $6, "updatedAt" = NOW()
+       WHERE id = $7`,
+      [data.homeTeamId, data.awayTeamId, data.scheduledTime, data.court || null, data.round || null, data.notes || null, gameId]
     );
 
     revalidatePath(`/events/${tournamentId}`);
@@ -318,6 +321,35 @@ export async function deleteGame(gameId: string): Promise<{ error?: string }> {
     return {};
   } catch (e) {
     console.error("[deleteGame]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+export async function clearGameResult(gameId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureGameTables();
+
+    const gameRes = await pool.query(`SELECT "tournamentId" FROM "game" WHERE id = $1`, [gameId]);
+    if (!gameRes.rows[0]) return { error: "Game not found" };
+    const tournamentId = gameRes.rows[0].tournamentId;
+    await assertCanManageTournament(tournamentId, session.user.id);
+
+    const statsRes = await pool.query(`SELECT "userId" FROM "game_player_stat" WHERE "gameId" = $1`, [gameId]);
+    await pool.query(`DELETE FROM "game_player_stat" WHERE "gameId" = $1`, [gameId]);
+    await pool.query(
+      `UPDATE "game" SET status = 'scheduled', "homeScore" = NULL, "awayScore" = NULL, "updatedAt" = NOW() WHERE id = $1`,
+      [gameId]
+    );
+
+    for (const row of statsRes.rows as { userId: string }[]) {
+      revalidatePath(`/athletes/${row.userId}`);
+    }
+    revalidatePath(`/events/${tournamentId}`);
+    return {};
+  } catch (e) {
+    console.error("[clearGameResult]", e);
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }
