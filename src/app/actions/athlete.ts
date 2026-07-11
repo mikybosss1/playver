@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { pool } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { getAthleteGameHistory, type AthleteGameHistoryItem } from "@/app/actions/game";
 
 const toISO = (v: Date | string | null) => (v ? new Date(v).toISOString() : null);
 
@@ -76,12 +77,13 @@ export type AthleteProfile = {
   events: AthleteEvent[];
   sports: string[];
   media: UserMediaItem[];
+  games: AthleteGameHistoryItem[];
 };
 
 export async function getAthleteProfile(userId: string): Promise<AthleteProfile | null> {
   await Promise.all([ensureUserProfileColumns(), ensureUserMediaTable()]);
 
-  const [userResult, teamsResult, eventsResult, mediaResult] = await Promise.all([
+  const [userResult, teamsResult, eventsResult, mediaResult, games] = await Promise.all([
     pool.query(
       `SELECT id, name, email, image, "createdAt", COALESCE(bio, '') AS bio, "mainSport" FROM "user" WHERE id = $1`,
       [userId]
@@ -109,6 +111,7 @@ export async function getAthleteProfile(userId: string): Promise<AthleteProfile 
       `SELECT id, url, type FROM "user_media" WHERE "userId" = $1 ORDER BY "createdAt" DESC`,
       [userId]
     ),
+    getAthleteGameHistory(userId),
   ]);
 
   if (!userResult.rows[0]) return null;
@@ -151,6 +154,7 @@ export async function getAthleteProfile(userId: string): Promise<AthleteProfile 
     events,
     sports,
     media: mediaResult.rows as UserMediaItem[],
+    games,
   };
 }
 
