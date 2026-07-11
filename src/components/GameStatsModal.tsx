@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import type { PlayerBoxScore } from "@/app/actions/game";
+import { sportTracksBoxScore } from "@/lib/game-sports";
 
 const STAT_ORDER: (keyof Pick<PlayerBoxScore, "points" | "rebounds" | "assists" | "steals" | "blocks">)[] = [
   "points", "rebounds", "assists", "steals", "blocks",
@@ -16,6 +17,7 @@ export default function GameStatsModal({
   awayTeamName,
   homeScore,
   awayScore,
+  sport,
   round,
   court,
   homeRoster,
@@ -26,6 +28,7 @@ export default function GameStatsModal({
   awayTeamName: string;
   homeScore: number;
   awayScore: number;
+  sport: string;
   round?: string | null;
   court?: string | null;
   homeRoster: PlayerBoxScore[];
@@ -35,6 +38,7 @@ export default function GameStatsModal({
   const t = useTranslations("EventDetails");
   const homeWon = homeScore > awayScore;
   const awayWon = awayScore > homeScore;
+  const tracksBoxScore = sportTracksBoxScore(sport);
 
   return (
     <div
@@ -76,10 +80,12 @@ export default function GameStatsModal({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-4">
-          <BoxScoreTable teamName={homeTeamName} players={homeRoster} />
-          <BoxScoreTable teamName={awayTeamName} players={awayRoster} />
-        </div>
+        {tracksBoxScore && (
+          <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-4">
+            <BoxScoreTable teamName={homeTeamName} players={homeRoster} />
+            <BoxScoreTable teamName={awayTeamName} players={awayRoster} />
+          </div>
+        )}
       </div>
     </div>
   );

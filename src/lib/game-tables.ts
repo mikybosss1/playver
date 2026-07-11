@@ -8,8 +8,8 @@ export async function ensureGameTables() {
       CREATE TABLE IF NOT EXISTS "game" (
         "id"            text PRIMARY KEY,
         "tournamentId"  text NOT NULL REFERENCES "event"("id") ON DELETE CASCADE,
-        "homeTeamId"    text NOT NULL REFERENCES "tournament_team"("id") ON DELETE CASCADE,
-        "awayTeamId"    text NOT NULL REFERENCES "tournament_team"("id") ON DELETE CASCADE,
+        "homeTeamId"    text REFERENCES "tournament_team"("id") ON DELETE CASCADE,
+        "awayTeamId"    text REFERENCES "tournament_team"("id") ON DELETE CASCADE,
         "court"         text,
         "round"         text,
         "notes"         text,
@@ -22,6 +22,10 @@ export async function ensureGameTables() {
       )
     `);
     await pool.query(`ALTER TABLE "game" ADD COLUMN IF NOT EXISTS "notes" text`);
+    // Teams can now be assigned later (e.g. bracket games scheduled before pool play finishes),
+    // so a game may exist with no home/away team yet — a "TBD" placeholder until edited.
+    await pool.query(`ALTER TABLE "game" ALTER COLUMN "homeTeamId" DROP NOT NULL`);
+    await pool.query(`ALTER TABLE "game" ALTER COLUMN "awayTeamId" DROP NOT NULL`);
     // Fix for games created before this column was timestamptz: the naive "timestamp" type
     // silently dropped timezone info and got reinterpreted using the DB session's timezone on
     // read, shifting displayed times by several hours. The stored digits already represent the

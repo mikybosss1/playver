@@ -37,19 +37,19 @@ export default function GameFormModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!homeTeamId || !awayTeamId || !scheduledTime) {
+    if (!scheduledTime) {
       setError(t("gameFormMissingFields"));
       return;
     }
-    if (homeTeamId === awayTeamId) {
+    if (homeTeamId && awayTeamId && homeTeamId === awayTeamId) {
       setError(t("gameFormSameTeam"));
       return;
     }
     setError(null);
     startTransition(async () => {
       const payload = {
-        homeTeamId,
-        awayTeamId,
+        homeTeamId: homeTeamId || undefined,
+        awayTeamId: awayTeamId || undefined,
         scheduledTime: new Date(scheduledTime).toISOString(),
         court: court.trim() || undefined,
         round: round.trim() || undefined,
