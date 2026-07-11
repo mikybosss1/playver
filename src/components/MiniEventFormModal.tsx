@@ -26,6 +26,7 @@ export default function MiniEventFormModal({
   const [title, setTitle] = useState(miniEvent?.title ?? "");
   const [scheduledTime, setScheduledTime] = useState(() => toLocalInputValue(miniEvent?.scheduledTime));
   const [court, setCourt] = useState(miniEvent?.court ?? "");
+  const [notes, setNotes] = useState(miniEvent?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -41,6 +42,7 @@ export default function MiniEventFormModal({
         title: title.trim(),
         scheduledTime: new Date(scheduledTime).toISOString(),
         court: court.trim() || undefined,
+        notes: notes.trim() || undefined,
       };
       const result = miniEvent ? await updateMiniEvent(miniEvent.id, payload) : await createMiniEvent(tournamentId, payload);
       if (result.error) {
@@ -98,6 +100,17 @@ export default function MiniEventFormModal({
                 onChange={(e) => setCourt(e.target.value)}
                 placeholder={t("courtPlaceholder")}
                 className="rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-red-200"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wide text-zinc-500">{t("notes")}</span>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t("notesPlaceholder")}
+                rows={3}
+                className="resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-red-200"
               />
             </label>
 

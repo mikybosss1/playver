@@ -12,6 +12,7 @@ export async function ensureGameTables() {
         "awayTeamId"    text NOT NULL REFERENCES "tournament_team"("id") ON DELETE CASCADE,
         "court"         text,
         "round"         text,
+        "notes"         text,
         "scheduledTime" timestamptz NOT NULL,
         "status"        text NOT NULL DEFAULT 'scheduled',
         "homeScore"     integer,
@@ -20,6 +21,7 @@ export async function ensureGameTables() {
         "updatedAt"     timestamptz NOT NULL DEFAULT NOW()
       )
     `);
+    await pool.query(`ALTER TABLE "game" ADD COLUMN IF NOT EXISTS "notes" text`);
     // Fix for games created before this column was timestamptz: the naive "timestamp" type
     // silently dropped timezone info and got reinterpreted using the DB session's timezone on
     // read, shifting displayed times by several hours. The stored digits already represent the

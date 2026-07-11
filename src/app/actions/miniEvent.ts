@@ -16,6 +16,7 @@ export type MiniEvent = {
   tournamentId: string;
   title: string;
   court: string | null;
+  notes: string | null;
   scheduledTime: string;
   status: MiniEventStatus;
 };
@@ -42,6 +43,7 @@ type MiniEventRow = {
   tournamentId: string;
   title: string;
   court: string | null;
+  notes: string | null;
   scheduledTime: Date | string;
   status: string;
 };
@@ -52,6 +54,7 @@ function mapMiniEventRow(row: MiniEventRow): MiniEvent {
     tournamentId: row.tournamentId,
     title: row.title,
     court: row.court,
+    notes: row.notes,
     scheduledTime: new Date(row.scheduledTime).toISOString(),
     status: row.status as MiniEventStatus,
   };
@@ -110,7 +113,7 @@ export async function getMiniEventDetail(miniEventId: string): Promise<MiniEvent
 
 export async function createMiniEvent(
   tournamentId: string,
-  data: { title: string; scheduledTime: string; court?: string }
+  data: { title: string; scheduledTime: string; court?: string; notes?: string }
 ): Promise<{ error?: string; miniEventId?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -123,9 +126,9 @@ export async function createMiniEvent(
 
     const id = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO "mini_event" (id, "tournamentId", title, court, "scheduledTime")
-       VALUES ($1, $2, $3, $4, $5)`,
-      [id, tournamentId, data.title.trim(), data.court || null, data.scheduledTime]
+      `INSERT INTO "mini_event" (id, "tournamentId", title, court, notes, "scheduledTime")
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, tournamentId, data.title.trim(), data.court || null, data.notes || null, data.scheduledTime]
     );
 
     revalidatePath(`/events/${tournamentId}`);
@@ -138,7 +141,7 @@ export async function createMiniEvent(
 
 export async function updateMiniEvent(
   miniEventId: string,
-  data: { title: string; scheduledTime: string; court?: string }
+  data: { title: string; scheduledTime: string; court?: string; notes?: string }
 ): Promise<{ error?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -153,8 +156,8 @@ export async function updateMiniEvent(
     if (!data.title.trim()) return { error: "Title is required" };
 
     await pool.query(
-      `UPDATE "mini_event" SET title = $1, court = $2, "scheduledTime" = $3, "updatedAt" = NOW() WHERE id = $4`,
-      [data.title.trim(), data.court || null, data.scheduledTime, miniEventId]
+      `UPDATE "mini_event" SET title = $1, court = $2, notes = $3, "scheduledTime" = $4, "updatedAt" = NOW() WHERE id = $5`,
+      [data.title.trim(), data.court || null, data.notes || null, data.scheduledTime, miniEventId]
     );
 
     revalidatePath(`/events/${tournamentId}`);
@@ -182,6 +185,28 @@ export async function deleteMiniEvent(miniEventId: string): Promise<{ error?: st
     return {};
   } catch (e) {
     console.error("[deleteMiniEvent]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+export async function clearMiniEventResult(miniEventId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureMiniEventTables();
+
+    const eventRes = await pool.query(`SELECT "tournamentId" FROM "mini_event" WHERE id = $1`, [miniEventId]);
+    if (!eventRes.rows[0]) return { error: "Mini event not found" };
+    const tournamentId = eventRes.rows[0].tournamentId;
+    await assertCanManageTournament(tournamentId, session.user.id);
+
+    await pool.query(`DELETE FROM "mini_event_result" WHERE "miniEventId" = $1`, [miniEventId]);
+    await pool.query(`UPDATE "mini_event" SET status = 'scheduled', "updatedAt" = NOW() WHERE id = $1`, [miniEventId]);
+
+    revalidatePath(`/events/${tournamentId}`);
+    return {};
+  } catch (e) {
+    console.error("[clearMiniEventResult]", e);
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }
