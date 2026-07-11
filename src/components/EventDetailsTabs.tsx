@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import type { EventItem, EventParticipant, GalleryItem } from "@/app/actions/event";
 import type { TournamentTeam } from "@/app/actions/tournament";
+import { disbandTournamentTeam } from "@/app/actions/tournament";
 import type { Game, GameDetail } from "@/app/actions/game";
 import { getGameDetail, deleteGame, clearGameResult } from "@/app/actions/game";
 import type { MiniEvent, MiniEventDetail, TournamentPlayer } from "@/app/actions/miniEvent";
@@ -115,6 +116,7 @@ function GameEntryCard({
   isLoadingStats,
   isDeleting,
   isClearing,
+  onEdit,
   onEnterResult,
   onViewResult,
   onDelete,
@@ -127,6 +129,7 @@ function GameEntryCard({
   isLoadingStats: boolean;
   isDeleting: boolean;
   isClearing: boolean;
+  onEdit: () => void;
   onEnterResult: () => void;
   onViewResult: () => void;
   onDelete: () => void;
@@ -168,13 +171,16 @@ function GameEntryCard({
         <div className="flex shrink-0 flex-col items-end gap-2">
           {canManage && (
             <div className="flex items-center gap-3">
+              <button type="button" onClick={onEdit} className="text-xs font-semibold text-zinc-500 hover:text-zinc-800">
+                {t("edit")}
+              </button>
               <button
                 type="button"
                 onClick={onEnterResult}
                 disabled={isLoadingResult}
                 className="text-xs font-semibold text-[#e21d12] hover:underline disabled:opacity-50"
               >
-                {isLoadingResult ? "..." : isFinal ? t("editResult") : t("enterResult")}
+                {isLoadingResult ? "..." : isFinal ? t("changeResult") : t("enterResult")}
               </button>
               {isFinal && (
                 <button
@@ -219,6 +225,7 @@ function MiniEventEntryCard({
   isLoadingResults,
   isDeleting,
   isClearing,
+  onEdit,
   onEnterResult,
   onViewResults,
   onDelete,
@@ -231,6 +238,7 @@ function MiniEventEntryCard({
   isLoadingResults: boolean;
   isDeleting: boolean;
   isClearing: boolean;
+  onEdit: () => void;
   onEnterResult: () => void;
   onViewResults: () => void;
   onDelete: () => void;
@@ -265,13 +273,16 @@ function MiniEventEntryCard({
         <div className="flex shrink-0 flex-col items-end gap-2">
           {canManage && (
             <div className="flex items-center gap-3">
+              <button type="button" onClick={onEdit} className="text-xs font-semibold text-zinc-500 hover:text-zinc-800">
+                {t("edit")}
+              </button>
               <button
                 type="button"
                 onClick={onEnterResult}
                 disabled={isLoadingResult}
                 className="text-xs font-semibold text-[#e21d12] hover:underline disabled:opacity-50"
               >
-                {isLoadingResult ? "..." : isFinal ? t("editResult") : t("enterResult")}
+                {isLoadingResult ? "..." : isFinal ? t("changeResult") : t("enterResult")}
               </button>
               {isFinal && (
                 <button
@@ -492,16 +503,17 @@ export default function EventDetailsTabs({
   const [teamsState, setTeamsState] = useState<TournamentTeam[] | undefined>(tournamentTeams ?? undefined);
   const [myTeamIdState, setMyTeamIdState] = useState<string | undefined>(myTournamentTeamId ?? undefined);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [gamesState, setGamesState] = useState<Game[] | undefined>(initialGames);
-  const [gameFormOpen, setGameFormOpen] = useState(false);
+  const [gameFormState, setGameFormState] = useState<{ mode: "create" } | { mode: "edit"; game: Game } | null>(null);
   const [resultModalDetail, setResultModalDetail] = useState<GameDetail | null>(null);
   const [statsModalDetail, setStatsModalDetail] = useState<GameDetail | null>(null);
   const [loadingGameId, setLoadingGameId] = useState<string | null>(null);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
   const [clearingGameId, setClearingGameId] = useState<string | null>(null);
   const [miniEventsState, setMiniEventsState] = useState<MiniEvent[] | undefined>(initialMiniEvents);
-  const [miniEventFormOpen, setMiniEventFormOpen] = useState(false);
+  const [miniEventFormState, setMiniEventFormState] = useState<{ mode: "create" } | { mode: "edit"; miniEvent: MiniEvent } | null>(null);
   const [miniEventResultModalDetail, setMiniEventResultModalDetail] = useState<MiniEventDetail | null>(null);
   const [miniEventResultsModalDetail, setMiniEventResultsModalDetail] = useState<MiniEventDetail | null>(null);
   const [loadingMiniEventId, setLoadingMiniEventId] = useState<string | null>(null);
@@ -559,7 +571,7 @@ export default function EventDetailsTabs({
   }
 
   function handleGameSaved() {
-    setGameFormOpen(false);
+    setGameFormState(null);
     router.refresh();
   }
 
@@ -610,7 +622,7 @@ export default function EventDetailsTabs({
   }
 
   function handleMiniEventSaved() {
-    setMiniEventFormOpen(false);
+    setMiniEventFormState(null);
     router.refresh();
   }
 
@@ -687,6 +699,18 @@ export default function EventDetailsTabs({
       setRemovingId(null);
     });
   }
+
+  function handleRemoveTeam(teamId: string) {
+    if (!window.confirm(t("removeTeamConfirm"))) return;
+    setRemovingTeamId(teamId);
+    startTransition(async () => {
+      const result = await disbandTournamentTeam(teamId);
+      if (!result.error) {
+        setTeamsState((prev) => prev?.filter((tm) => tm.id !== teamId));
+      }
+      setRemovingTeamId(null);
+    });
+  }
   const capacity = event.capacity ?? 0;
   const end = new Date(event.endDateTime);
   const agendaItems = useMemo(() =>
@@ -722,14 +746,14 @@ export default function EventDetailsTabs({
     () =>
       [...(gamesState ?? [])]
         .filter((g) => g.status === "final")
-        .sort((a, b) => b.scheduledTime.localeCompare(a.scheduledTime)),
+        .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime)),
     [gamesState]
   );
   const finalMiniEvents = useMemo(
     () =>
       [...(miniEventsState ?? [])]
         .filter((m) => m.status === "final")
-        .sort((a, b) => b.scheduledTime.localeCompare(a.scheduledTime)),
+        .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime)),
     [miniEventsState]
   );
   type ResultEntry =
@@ -742,7 +766,7 @@ export default function EventDetailsTabs({
       miniEvent,
       sortKey: miniEvent.scheduledTime,
     }));
-    return [...gameEntries, ...miniEventEntries].sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+    return [...gameEntries, ...miniEventEntries].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   }, [finalGames, finalMiniEvents]);
   type TeamStanding = {
     teamId: string;
@@ -873,14 +897,14 @@ export default function EventDetailsTabs({
               <div className="flex shrink-0 gap-2">
                 <button
                   type="button"
-                  onClick={() => setGameFormOpen(true)}
+                  onClick={() => setGameFormState({ mode: "create" })}
                   className="rounded-lg bg-[#e21d12] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#d41810]"
                 >
                   {t("scheduleGame")}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMiniEventFormOpen(true)}
+                  onClick={() => setMiniEventFormState({ mode: "create" })}
                   className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
                 >
                   {t("scheduleMiniEvent")}
@@ -906,6 +930,7 @@ export default function EventDetailsTabs({
                     isLoadingStats={loadingGameId === entry.game.id}
                     isDeleting={deletingGameId === entry.game.id}
                     isClearing={clearingGameId === entry.game.id}
+                    onEdit={() => setGameFormState({ mode: "edit", game: entry.game })}
                     onEnterResult={() => openResultModal(entry.game.id)}
                     onViewResult={() => openStatsModal(entry.game.id)}
                     onDelete={() => handleDeleteGame(entry.game.id)}
@@ -921,6 +946,7 @@ export default function EventDetailsTabs({
                     isLoadingResults={loadingMiniEventId === entry.miniEvent.id}
                     isDeleting={deletingMiniEventId === entry.miniEvent.id}
                     isClearing={clearingMiniEventId === entry.miniEvent.id}
+                    onEdit={() => setMiniEventFormState({ mode: "edit", miniEvent: entry.miniEvent })}
                     onEnterResult={() => openMiniEventResultModal(entry.miniEvent.id)}
                     onViewResults={() => openMiniEventResultsModal(entry.miniEvent.id)}
                     onDelete={() => handleDeleteMiniEvent(entry.miniEvent.id)}
@@ -1154,9 +1180,25 @@ export default function EventDetailsTabs({
                       <span className="text-xs font-semibold text-zinc-500">
                         {t("teamPlayerCount", { current: team.memberCount, total: team.playerCount })}
                       </span>
-                      {showJoin && (
+                      <div className="flex items-center gap-3">
+                        {(isOrganizer || isSuperAdmin) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRemoveTeam(team.id);
+                            }}
+                            disabled={removingTeamId === team.id}
+                            className="text-xs font-semibold text-red-500 hover:underline disabled:opacity-50"
+                          >
+                            {removingTeamId === team.id ? "..." : t("removeTeam")}
+                          </button>
+                        )}
+                        {showJoin && (
                           <JoinOpenTeamButton teamId={team.id} tournamentId={tournamentId} />
                         )}
+                      </div>
                     </div>
                   </>
                 );
@@ -1242,11 +1284,12 @@ export default function EventDetailsTabs({
         />
       )}
 
-      {gameFormOpen && teamsState && (
+      {gameFormState && teamsState && (
         <GameFormModal
           tournamentId={event.id}
           teams={teamsState}
-          onClose={() => setGameFormOpen(false)}
+          game={gameFormState.mode === "edit" ? gameFormState.game : undefined}
+          onClose={() => setGameFormState(null)}
           onSaved={handleGameSaved}
         />
       )}
@@ -1273,10 +1316,11 @@ export default function EventDetailsTabs({
         />
       )}
 
-      {miniEventFormOpen && (
+      {miniEventFormState && (
         <MiniEventFormModal
           tournamentId={event.id}
-          onClose={() => setMiniEventFormOpen(false)}
+          miniEvent={miniEventFormState.mode === "edit" ? miniEventFormState.miniEvent : undefined}
+          onClose={() => setMiniEventFormState(null)}
           onSaved={handleMiniEventSaved}
         />
       )}

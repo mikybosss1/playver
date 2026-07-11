@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { sendTournamentMemberInviteEmail, sendJoinRequestNotificationEmail, sendTournamentTeamRegisteredEmail } from "@/lib/emails";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
+import { assertCanManageTournament } from "@/app/actions/game";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -915,7 +916,9 @@ export async function disbandTournamentTeam(teamId: string): Promise<{ error?: s
       [teamId]
     );
     if (!teamRes.rows[0]) return { error: "Team not found" };
-    if (teamRes.rows[0].captainId !== session.user.id) return { error: "Forbidden" };
+    if (teamRes.rows[0].captainId !== session.user.id) {
+      await assertCanManageTournament(teamRes.rows[0].tournamentId, session.user.id);
+    }
 
     await pool.query(`DELETE FROM "tournament_team" WHERE id = $1`, [teamId]);
 
