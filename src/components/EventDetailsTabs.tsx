@@ -137,6 +137,7 @@ function GameEntryCard({
   t: (key: string) => string;
 }) {
   const isFinal = game.status === "final";
+  const bothTeamsAssigned = !!game.homeTeamId && !!game.awayTeamId;
   return (
     <div className="grid gap-6 rounded-[20px] border border-zinc-100 bg-white p-6 shadow-md md:grid-cols-[160px_1fr]">
       <div className="flex flex-col items-center justify-center gap-1 border-zinc-100 text-center md:border-r">
@@ -159,7 +160,7 @@ function GameEntryCard({
             )}
           </div>
           <h3 className="mt-2 text-2xl font-extrabold text-zinc-950">
-            {game.homeTeamName} <span className="text-zinc-300">{t("vs")}</span> {game.awayTeamName}
+            {game.homeTeamName ?? t("tbd")} <span className="text-zinc-300">{t("vs")}</span> {game.awayTeamName ?? t("tbd")}
           </h3>
           {isFinal && (
             <p className="mt-1 text-lg font-extrabold text-zinc-700">{game.homeScore} – {game.awayScore}</p>
@@ -177,7 +178,8 @@ function GameEntryCard({
               <button
                 type="button"
                 onClick={onEnterResult}
-                disabled={isLoadingResult}
+                disabled={isLoadingResult || !bothTeamsAssigned}
+                title={bothTeamsAssigned ? undefined : t("assignTeamsFirst")}
                 className="text-xs font-semibold text-[#e21d12] hover:underline disabled:opacity-50"
               >
                 {isLoadingResult ? "..." : isFinal ? t("changeResult") : t("enterResult")}
@@ -786,7 +788,7 @@ export default function EventDetailsTabs({
       ])
     );
     for (const game of finalGames) {
-      if (game.homeScore == null || game.awayScore == null) continue;
+      if (game.homeScore == null || game.awayScore == null || !game.homeTeamId || !game.awayTeamId) continue;
       const home = byTeam.get(game.homeTeamId);
       if (home) {
         home.gamesPlayed += 1;
@@ -1017,7 +1019,7 @@ export default function EventDetailsTabs({
                         </span>
                       )}
                       <h3 className="mt-2 text-xl font-extrabold text-zinc-950">
-                        {entry.game.homeTeamName} <span className="text-zinc-300">{t("vs")}</span> {entry.game.awayTeamName}
+                        {entry.game.homeTeamName ?? t("tbd")} <span className="text-zinc-300">{t("vs")}</span> {entry.game.awayTeamName ?? t("tbd")}
                       </h3>
                       <p className="mt-1 text-2xl font-extrabold text-[#b72a25]">{entry.game.homeScore} – {entry.game.awayScore}</p>
                       <p className="mt-1 text-xs font-semibold text-zinc-400">
@@ -1297,6 +1299,7 @@ export default function EventDetailsTabs({
       {resultModalDetail && (
         <GameResultModal
           detail={resultModalDetail}
+          sport={event.sport}
           onClose={() => setResultModalDetail(null)}
           onSaved={handleResultSaved}
         />
@@ -1304,10 +1307,11 @@ export default function EventDetailsTabs({
 
       {statsModalDetail && (
         <GameStatsModal
-          homeTeamName={statsModalDetail.homeTeamName}
-          awayTeamName={statsModalDetail.awayTeamName}
+          homeTeamName={statsModalDetail.homeTeamName ?? t("tbd")}
+          awayTeamName={statsModalDetail.awayTeamName ?? t("tbd")}
           homeScore={statsModalDetail.homeScore ?? 0}
           awayScore={statsModalDetail.awayScore ?? 0}
+          sport={event.sport}
           round={statsModalDetail.round}
           court={statsModalDetail.court}
           homeRoster={statsModalDetail.homeRoster}

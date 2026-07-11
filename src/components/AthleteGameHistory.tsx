@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { AthleteGameHistoryItem } from "@/app/actions/game";
 import GameStatsModal from "@/components/GameStatsModal";
+import { sportTracksBoxScore } from "@/lib/game-sports";
 
 function formatGameDate(iso: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
@@ -49,9 +50,11 @@ export default function AthleteGameHistory({ games }: { games: AthleteGameHistor
               <p className="mt-0.5 truncate text-xs text-zinc-400">
                 {game.tournamentTitle} · {formatGameDate(game.scheduledTime)}
               </p>
-              <p className="mt-1 text-xs font-semibold text-zinc-500">
-                {game.myStats.points} {t("ptsShort")} · {game.myStats.rebounds} {t("rebShort")} · {game.myStats.assists} {t("astShort")}
-              </p>
+              {sportTracksBoxScore(game.sport) && (
+                <p className="mt-1 text-xs font-semibold text-zinc-500">
+                  {game.myStats.points} {t("ptsShort")} · {game.myStats.rebounds} {t("rebShort")} · {game.myStats.assists} {t("astShort")}
+                </p>
+              )}
             </div>
             <div className="shrink-0 text-right">
               <p className="text-lg font-extrabold text-zinc-950">
@@ -68,6 +71,7 @@ export default function AthleteGameHistory({ games }: { games: AthleteGameHistor
           awayTeamName={selected.awayTeamName}
           homeScore={selected.isHome ? selected.teamScore : selected.opponentScore}
           awayScore={selected.isHome ? selected.opponentScore : selected.teamScore}
+          sport={selected.sport}
           round={selected.round}
           court={selected.court}
           homeRoster={selected.homeRoster}

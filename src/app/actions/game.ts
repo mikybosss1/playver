@@ -25,10 +25,10 @@ export type PlayerBoxScore = {
 export type Game = {
   id: string;
   tournamentId: string;
-  homeTeamId: string;
-  homeTeamName: string;
-  awayTeamId: string;
-  awayTeamName: string;
+  homeTeamId: string | null;
+  homeTeamName: string | null;
+  awayTeamId: string | null;
+  awayTeamName: string | null;
   court: string | null;
   round: string | null;
   notes: string | null;
@@ -47,6 +47,7 @@ export type AthleteGameHistoryItem = {
   gameId: string;
   tournamentId: string;
   tournamentTitle: string;
+  sport: string;
   scheduledTime: string;
   round: string | null;
   court: string | null;
@@ -67,10 +68,10 @@ export type AthleteGameHistoryItem = {
 type GameRow = {
   id: string;
   tournamentId: string;
-  homeTeamId: string;
-  homeTeamName: string;
-  awayTeamId: string;
-  awayTeamName: string;
+  homeTeamId: string | null;
+  homeTeamName: string | null;
+  awayTeamId: string | null;
+  awayTeamName: string | null;
   court: string | null;
   round: string | null;
   notes: string | null;
@@ -156,8 +157,8 @@ async function buildBoxScore(teamId: string, gameId: string): Promise<PlayerBoxS
 const GAME_SELECT = `
   SELECT g.*, ht.name as "homeTeamName", at.name as "awayTeamName"
   FROM "game" g
-  JOIN "tournament_team" ht ON ht.id = g."homeTeamId"
-  JOIN "tournament_team" at ON at.id = g."awayTeamId"
+  LEFT JOIN "tournament_team" ht ON ht.id = g."homeTeamId"
+  LEFT JOIN "tournament_team" at ON at.id = g."awayTeamId"
 `;
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
@@ -177,8 +178,8 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
   if (!res.rows[0]) return null;
   const row = res.rows[0] as GameRow;
   const [homeRoster, awayRoster] = await Promise.all([
-    buildBoxScore(row.homeTeamId, gameId),
-    buildBoxScore(row.awayTeamId, gameId),
+    row.homeTeamId ? buildBoxScore(row.homeTeamId, gameId) : Promise.resolve([]),
+    row.awayTeamId ? buildBoxScore(row.awayTeamId, gameId) : Promise.resolve([]),
   ]);
   return { ...mapGameRow(row), homeRoster, awayRoster };
 }
@@ -187,7 +188,7 @@ export async function getAthleteGameHistory(userId: string): Promise<AthleteGame
   await ensureGameTables();
 
   const res = await pool.query(
-    `SELECT g.id as "gameId", g."tournamentId", e.title as "tournamentTitle",
+    `SELECT g.id as "gameId", g."tournamentId", e.title as "tournamentTitle", e.sport,
             g."scheduledTime", g.round, g.court,
             g."homeTeamId", g."awayTeamId", g."homeScore", g."awayScore",
             ht.name as "homeTeamName", at.name as "awayTeamName",
@@ -204,7 +205,7 @@ export async function getAthleteGameHistory(userId: string): Promise<AthleteGame
 
   return Promise.all(
     res.rows.map(async (row: {
-      gameId: string; tournamentId: string; tournamentTitle: string; scheduledTime: Date | string;
+      gameId: string; tournamentId: string; tournamentTitle: string; sport: string; scheduledTime: Date | string;
       round: string | null; court: string | null; homeTeamId: string; awayTeamId: string;
       homeScore: number | null; awayScore: number | null; homeTeamName: string; awayTeamName: string; myTeamId: string;
     }) => {
@@ -221,6 +222,7 @@ export async function getAthleteGameHistory(userId: string): Promise<AthleteGame
         gameId: row.gameId,
         tournamentId: row.tournamentId,
         tournamentTitle: row.tournamentTitle,
+        sport: row.sport,
         scheduledTime: new Date(row.scheduledTime).toISOString(),
         round: row.round,
         court: row.court,
@@ -247,7 +249,7 @@ export async function getAthleteGameHistory(userId: string): Promise<AthleteGame
 
 export async function createGame(
   tournamentId: string,
-  data: { homeTeamId: string; awayTeamId: string; scheduledTime: string; court?: string; round?: string; notes?: string }
+  data: { homeTeamId?: string; awayTeamId?: string; scheduledTime: string; court?: string; round?: string; notes?: string }
 ): Promise<{ error?: string; gameId?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -255,14 +257,16 @@ export async function createGame(
     await Promise.all([ensureGameTables(), ensureTournamentTables()]);
     await assertCanManageTournament(tournamentId, session.user.id);
 
-    if (data.homeTeamId === data.awayTeamId) return { error: "A team cannot play itself" };
+    if (data.homeTeamId && data.awayTeamId && data.homeTeamId === data.awayTeamId) {
+      return { error: "A team cannot play itself" };
+    }
     if (!data.scheduledTime) return { error: "Scheduled time is required" };
 
     const id = crypto.randomUUID();
     await pool.query(
       `INSERT INTO "game" (id, "tournamentId", "homeTeamId", "awayTeamId", court, round, notes, "scheduledTime")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [id, tournamentId, data.homeTeamId, data.awayTeamId, data.court || null, data.round || null, data.notes || null, data.scheduledTime]
+      [id, tournamentId, data.homeTeamId || null, data.awayTeamId || null, data.court || null, data.round || null, data.notes || null, data.scheduledTime]
     );
 
     revalidatePath(`/events/${tournamentId}`);
@@ -275,7 +279,7 @@ export async function createGame(
 
 export async function updateGame(
   gameId: string,
-  data: { homeTeamId: string; awayTeamId: string; scheduledTime: string; court?: string; round?: string; notes?: string }
+  data: { homeTeamId?: string; awayTeamId?: string; scheduledTime: string; court?: string; round?: string; notes?: string }
 ): Promise<{ error?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -287,13 +291,15 @@ export async function updateGame(
     const tournamentId = gameRes.rows[0].tournamentId;
     await assertCanManageTournament(tournamentId, session.user.id);
 
-    if (data.homeTeamId === data.awayTeamId) return { error: "A team cannot play itself" };
+    if (data.homeTeamId && data.awayTeamId && data.homeTeamId === data.awayTeamId) {
+      return { error: "A team cannot play itself" };
+    }
 
     await pool.query(
       `UPDATE "game"
        SET "homeTeamId" = $1, "awayTeamId" = $2, "scheduledTime" = $3, court = $4, round = $5, notes = $6, "updatedAt" = NOW()
        WHERE id = $7`,
-      [data.homeTeamId, data.awayTeamId, data.scheduledTime, data.court || null, data.round || null, data.notes || null, gameId]
+      [data.homeTeamId || null, data.awayTeamId || null, data.scheduledTime, data.court || null, data.round || null, data.notes || null, gameId]
     );
 
     revalidatePath(`/events/${tournamentId}`);
@@ -367,10 +373,13 @@ export async function submitGameResult(
     if (!session) return { error: "Unauthorized" };
     await ensureGameTables();
 
-    const gameRes = await pool.query(`SELECT "tournamentId" FROM "game" WHERE id = $1`, [gameId]);
+    const gameRes = await pool.query(`SELECT "tournamentId", "homeTeamId", "awayTeamId" FROM "game" WHERE id = $1`, [gameId]);
     if (!gameRes.rows[0]) return { error: "Game not found" };
     const tournamentId = gameRes.rows[0].tournamentId;
     await assertCanManageTournament(tournamentId, session.user.id);
+    if (!gameRes.rows[0].homeTeamId || !gameRes.rows[0].awayTeamId) {
+      return { error: "Assign both teams before entering a result" };
+    }
 
     await pool.query(
       `UPDATE "game" SET status = 'final', "homeScore" = $1, "awayScore" = $2, "updatedAt" = NOW() WHERE id = $3`,
