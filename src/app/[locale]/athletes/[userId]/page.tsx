@@ -5,6 +5,51 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Link } from "@/i18n/routing";
 import { getAthleteProfile } from "@/app/actions/athlete";
+import AthleteGameHistory from "@/components/AthleteGameHistory";
+import MobileSectionNav from "@/components/MobileSectionNav";
+
+const NAV_ICON_PROPS = {
+  width: 20,
+  height: 20,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+function IconTeams() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function IconEvents() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function IconGameHistory() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
+function IconGallery() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
+    </svg>
+  );
+}
 
 function formatMonth(iso: string) {
   return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date(iso));
@@ -44,8 +89,7 @@ export default async function AthleteProfilePage({
 
   if (!profile) notFound();
 
-  const { user, teams, events, sports, media } = profile;
-  const captainTeams = teams.filter((team) => team.isCaptain);
+  const { user, teams, events, sports, media, games } = profile;
   const now = new Date();
   const upcomingEvents = events.filter((e) => new Date(e.startDateTime) >= now);
   const pastEvents = events.filter((e) => new Date(e.startDateTime) < now);
@@ -111,25 +155,21 @@ export default async function AthleteProfilePage({
               )}
 
               {/* Stats row */}
-              <div className="grid grid-cols-3 gap-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+              <div className="grid grid-cols-2 gap-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
                 <div className="text-center">
                   <p className="text-2xl font-extrabold text-zinc-950">{teams.length}</p>
                   <p className="text-xs font-semibold text-zinc-500 mt-0.5">{t("teamsCount")}</p>
                 </div>
-                <div className="text-center border-x border-zinc-200">
+                <div className="text-center border-l border-zinc-200">
                   <p className="text-2xl font-extrabold text-zinc-950">{events.length}</p>
                   <p className="text-xs font-semibold text-zinc-500 mt-0.5">{t("eventsCount")}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-extrabold text-zinc-950">{captainTeams.length}</p>
-                  <p className="text-xs font-semibold text-zinc-500 mt-0.5">{t("captainOf")}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Teams */}
-          <section className="mb-6">
+          <section id="teams" className="mb-6 scroll-mt-20">
             <h2 className="text-lg font-extrabold text-zinc-900 mb-4">{t("teams")}</h2>
             {teams.length === 0 ? (
               <div className="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-zinc-500 text-sm">
@@ -174,7 +214,7 @@ export default async function AthleteProfilePage({
           </section>
 
           {/* Events */}
-          <section className="mb-6">
+          <section id="events" className="mb-6 scroll-mt-20">
             <h2 className="text-lg font-extrabold text-zinc-900 mb-4">{t("events")}</h2>
             {events.length === 0 ? (
               <div className="bg-white rounded-2xl border border-zinc-200 p-8 text-center text-zinc-500 text-sm">
@@ -206,9 +246,12 @@ export default async function AthleteProfilePage({
             )}
           </section>
 
+          {/* Game History */}
+          <AthleteGameHistory games={games} />
+
           {/* Gameplay Gallery */}
           {media.length > 0 && (
-            <section>
+            <section id="gallery" className="scroll-mt-20">
               <h2 className="text-lg font-extrabold text-zinc-900 mb-4">{t("galleryTitle")}</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {media.map((item) => (
@@ -221,6 +264,14 @@ export default async function AthleteProfilePage({
         </div>
       </main>
       <Footer />
+      <MobileSectionNav
+        items={[
+          { key: "teams", label: t("teams"), icon: <IconTeams /> },
+          { key: "events", label: t("events"), icon: <IconEvents /> },
+          { key: "games", label: t("gameHistory"), icon: <IconGameHistory /> },
+          ...(media.length > 0 ? [{ key: "gallery", label: t("galleryTitle"), icon: <IconGallery /> }] : []),
+        ]}
+      />
     </>
   );
 }

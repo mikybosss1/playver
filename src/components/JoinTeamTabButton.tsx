@@ -6,10 +6,8 @@ export default function JoinTeamTabButton() {
   const t = useTranslations("EventDetails");
 
   function handleClick() {
-    const tab = document.getElementById("event-tab-teams");
-    const section = document.getElementById("event-tabs");
-    if (tab) tab.click();
-    if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.location.hash = "teams";
+    document.getElementById("event-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (

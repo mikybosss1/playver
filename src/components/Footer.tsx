@@ -7,7 +7,7 @@ export default async function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-zinc-50 border-t border-zinc-200 py-6">
+    <footer className="bg-zinc-50 border-t border-zinc-200 pt-6 pb-24 md:pb-6">
       <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <Link href="/">
           <Image src="/logo.png" alt="Playver" width={100} height={40} className="object-contain" />

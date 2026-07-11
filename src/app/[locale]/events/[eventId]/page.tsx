@@ -12,6 +12,8 @@ import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getEventById, getEventParticipants, getEventParticipationMap, getEventFormFields } from "@/app/actions/event";
 import { getTournamentTeams, getMyTournamentTeam, getPendingJoinRequests, getMyTeamOptions } from "@/app/actions/tournament";
+import { getGamesForEvent } from "@/app/actions/game";
+import { getMiniEventsForEvent, getTournamentPlayers } from "@/app/actions/miniEvent";
 import { getUserRole } from "@/app/actions/admin";
 import { formatPrice } from "@/lib/stripe";
 import TournamentRegisterButton from "@/components/TournamentRegisterButton";
@@ -61,13 +63,16 @@ export default async function EventDetailsPage({
     session ? getUserRole(session.user.id) : Promise.resolve("player" as const),
   ]);
 
-  const [teams, myTeam, myTeamOptions] = isTournament
+  const [teams, myTeam, myTeamOptions, games, miniEvents, tournamentPlayers] = isTournament
     ? await Promise.all([
         getTournamentTeams(eventId),
         session ? getMyTournamentTeam(eventId) : Promise.resolve(null),
         session ? getMyTeamOptions() : Promise.resolve([]),
+        getGamesForEvent(eventId),
+        getMiniEventsForEvent(eventId),
+        getTournamentPlayers(eventId),
       ])
-    : [[], null, []];
+    : [[], null, [], [], [], []];
 
   const pendingRequests =
     isTournament && session && myTeam && myTeam.captainId === session.user.id
@@ -89,7 +94,7 @@ export default async function EventDetailsPage({
   return (
     <>
       <Navbar />
-      <main className="flex-1 bg-white">
+      <main className="flex-1 bg-white pb-20 lg:pb-0">
         <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
           <Link
             href={isTournament ? "/tournaments" : "/events"}
@@ -339,6 +344,7 @@ export default async function EventDetailsPage({
             event={event}
             participants={participants}
             isSuperAdmin={isSuperAdmin}
+            isOrganizer={isOrganizer}
             hideTabs={isTournament ? ["participants"] : []}
             desktopHideTabs={isTournament ? ["details"] : []}
             initialTab={isTournament ? (isMobile ? "details" : "teams") : undefined}
@@ -346,6 +352,9 @@ export default async function EventDetailsPage({
             myTournamentTeamId={myTeam?.id}
             canRequestJoin={!!(session && !myTeam && !isEnded)}
             tournamentId={eventId}
+            games={isTournament ? games : undefined}
+            miniEvents={isTournament ? miniEvents : undefined}
+            tournamentPlayers={isTournament ? tournamentPlayers : undefined}
           />
         </div>
       </main>

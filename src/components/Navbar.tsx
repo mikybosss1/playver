@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
 import LanguageToggle from "./LanguageToggle";
+import MobileBottomNav from "./MobileBottomNav";
 import { useSession, signOut } from "@/lib/auth-client";
 
 const navHrefs = ["/tournaments", "/events", "/teams", "/request-a-feature"] as const;
@@ -15,9 +16,38 @@ export default function Navbar() {
   const { data: session } = useSession();
   const firstName = session?.user?.name?.split(" ")[0] ?? null;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
 
   // Close menu on route change
   useEffect(() => { setMenuOpen(false); }, [pathname]);
+
+  // Hide the header while scrolling down, bring it back while scrolling up.
+  // Near the very top of the page it always stays visible. A small hysteresis
+  // buffer + rAF throttling stop trackpad momentum/rubber-banding from
+  // flickering the state (and interrupting the CSS transition) near the top.
+  useEffect(() => {
+    let ticking = false;
+    function handleScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollY.current;
+        if (currentY <= 40) {
+          setHidden(false);
+        } else if (delta > 4) {
+          setHidden(true);
+        } else if (delta < -4) {
+          setHidden(false);
+        }
+        lastScrollY.current = currentY;
+        ticking = false;
+      });
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navLinks = [
     { href: navHrefs[0], label: t("tournaments") },
@@ -27,7 +57,12 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="w-full sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200">
+    <>
+    <header
+      className={`w-full sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200 transition-transform duration-500 ease-out ${
+        hidden && !menuOpen ? "-translate-y-full" : "translate-y-0"
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center gap-4">
         {/* Logo */}
         <Link href="/" className="shrink-0">
@@ -144,5 +179,7 @@ export default function Navbar() {
         </div>
       )}
     </header>
+    <MobileBottomNav />
+    </>
   );
 }

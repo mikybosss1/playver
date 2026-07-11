@@ -8,11 +8,49 @@ import LeaveTeamButton from "@/components/LeaveTeamButton";
 import RemoveTeamMemberButton from "@/components/RemoveTeamMemberButton";
 import { JoinOpenTeamButton } from "@/components/TournamentCaptainPanel";
 import TeamJoinRequests from "@/components/TeamJoinRequests";
+import BackButton from "@/components/BackButton";
+import MobileSectionNav from "@/components/MobileSectionNav";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getMembershipMap, getTeamById, getTeamMembers } from "@/app/actions/team";
 import { getTeamEvents } from "@/app/actions/event";
 import { getJoinableTournamentRegistrations, getPendingJoinRequestsForLinkedTeam } from "@/app/actions/tournament";
+
+const NAV_ICON_PROPS = {
+  width: 20,
+  height: 20,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+function IconAbout() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  );
+}
+
+function IconRoster() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function IconEvents() {
+  return (
+    <svg {...NAV_ICON_PROPS}>
+      <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
@@ -82,9 +120,7 @@ export default async function TeamDetailsPage({
       <Navbar />
       <main className="flex-1 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 overflow-x-hidden">
-          <Link href="/teams" className="mb-6 inline-flex text-sm font-semibold text-[#e21d12] hover:underline">
-            ← {t("back")}
-          </Link>
+          <BackButton label={t("back")} fallbackHref="/teams" />
 
           <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
             {/* Hero */}
@@ -129,13 +165,13 @@ export default async function TeamDetailsPage({
                 </div>
 
                 {/* About */}
-                <section className="min-w-0">
+                <section id="about" className="min-w-0 scroll-mt-20">
                   <h2 className="mb-3 text-xl font-extrabold text-zinc-950">{t("about")}</h2>
                   <p className="whitespace-pre-line break-words text-base leading-7 text-zinc-600">{team.bio || t("noBio")}</p>
                 </section>
 
                 {/* Roster */}
-                <section className="min-w-0">
+                <section id="roster" className="min-w-0 scroll-mt-20">
                   <h2 className="mb-4 text-xl font-extrabold text-zinc-950">{t("roster")}</h2>
                   {sortedMembers.length === 0 ? (
                     <div className="rounded-[18px] border-2 border-dashed border-zinc-200 py-16 text-center">
@@ -194,7 +230,7 @@ export default async function TeamDetailsPage({
                 </section>
 
                 {/* Events Attending */}
-                <section className="min-w-0">
+                <section id="events" className="min-w-0 scroll-mt-20">
                   <h2 className="mb-4 text-xl font-extrabold text-zinc-950">{t("eventsAttending")}</h2>
 
                   {upcomingEvents.length === 0 && pastEvents.length === 0 ? (
@@ -299,6 +335,13 @@ export default async function TeamDetailsPage({
         </div>
       </main>
       <Footer />
+      <MobileSectionNav
+        items={[
+          { key: "about", label: t("about"), icon: <IconAbout /> },
+          { key: "roster", label: t("roster"), icon: <IconRoster /> },
+          { key: "events", label: t("eventsAttending"), icon: <IconEvents /> },
+        ]}
+      />
     </>
   );
 }
