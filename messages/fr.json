@@ -185,6 +185,7 @@
     "back": "Retour aux événements",
     "free": "GRATUIT",
     "eventEnded": "Événement terminé",
+    "eventCancelled": "Annulé",
     "date": "Date",
     "location": "Lieu",
     "organizedBy": "Organisé par",
@@ -309,6 +310,26 @@
     "teamPlayerCount": "{current} / {total} joueurs",
     "joinATeam": "Rejoindre une équipe",
     "maxPlayersPerTeam": "Jusqu'à {max} joueurs par équipe"
+  },
+  "EventCancelPostpone": {
+    "buttonLabel": "Annuler / Reporter",
+    "modalTitle": "Gérer l'événement",
+    "modalSubtitle": "Que souhaitez-vous faire avec « {eventTitle} » ?",
+    "postponeOption": "Reporter (changer la date)",
+    "cancelOption": "Annuler l'événement",
+    "close": "Fermer",
+    "cancelConfirmTitle": "Annuler cet événement ?",
+    "cancelConfirmBody": "Voulez-vous vraiment annuler « {eventTitle} » ? Toutes les personnes inscrites seront averties par courriel. Cette action est irréversible.",
+    "cancelConfirmPaidBody": "Voulez-vous vraiment annuler « {eventTitle} » ? Toutes les personnes inscrites seront averties par courriel, et les participants ayant payé seront automatiquement remboursés dans leur portefeuille. Cette action est irréversible.",
+    "back": "Retour",
+    "cancelling": "Annulation...",
+    "confirmCancel": "Oui, annuler l'événement",
+    "postponeTitle": "Reporter l'événement",
+    "postponeBody": "Choisissez une nouvelle date et heure. Toutes les personnes inscrites seront averties par courriel — personne n'a besoin de se réinscrire.",
+    "newStart": "Nouveau début",
+    "newEnd": "Nouvelle fin",
+    "postponing": "Enregistrement...",
+    "confirmPostpone": "Enregistrer la nouvelle date"
   },
   "TournamentPanel": {
     "teamRegistered": "Équipe inscrite",
@@ -549,6 +570,8 @@
     "type_withdrawal_reversed": "Retrait remboursé",
     "errorMinDeposit": "Le dépôt minimum est de 1 $",
     "errorMinWithdrawal": "Le retrait minimum est de 10 $",
+    "heldBalanceNote": "{amount} retenu jusqu'à 48 heures après la fin de votre/vos événement(s)",
+    "availableToWithdraw": "Disponible pour retrait : {amount}",
     "errorGeneric": "Une erreur est survenue — veuillez réessayer."
   },
   "DashboardSettings": {

@@ -175,6 +175,18 @@ export async function adminAddParticipant(eventId: string, userId: string) {
 
 export async function adminDeleteEvent(eventId: string) {
   await requireSuperAdmin();
+
+  const [completedPayments, teamPayments] = await Promise.all([
+    pool.query(`SELECT 1 FROM "event_payment" WHERE "eventId" = $1 AND status = 'completed' LIMIT 1`, [eventId]),
+    pool.query(
+      `SELECT 1 FROM "tournament_team_payment" ttp JOIN "tournament_team" tt ON tt.id = ttp."teamId" WHERE tt."tournamentId" = $1 LIMIT 1`,
+      [eventId]
+    ),
+  ]);
+  if (completedPayments.rows.length > 0 || teamPayments.rows.length > 0) {
+    throw new Error("This event has completed payments — cancel it instead so participants get refunded.");
+  }
+
   const [eventRow, participantsRow] = await Promise.all([
     pool.query(`SELECT title, sport, location, "startDateTime" FROM "event" WHERE id = $1`, [eventId]),
     pool.query(`SELECT u.name, u.email FROM "event_participant" ep JOIN "user" u ON u.id = ep."userId" WHERE ep."eventId" = $1`, [eventId]),

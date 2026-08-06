@@ -7,8 +7,36 @@ import { stripe } from "@/lib/stripe";
 import { pool, withTransaction } from "@/lib/db";
 
 const MIN_WITHDRAWAL_CENTS = 1000; // $10
+const WITHDRAWAL_HOLD_HOURS = 48;
 
 class InsufficientFundsError extends Error {}
+
+// Money from a paid signup stays "held" (not withdrawable) until 48 hours after
+// that event's end date, or indefinitely if the event was cancelled and the
+// refund hasn't cleared yet — so an organizer can never withdraw the money out
+// from under a refund that might still need to happen. Computed live from the
+// payment tables (not a stored/cached value) so it automatically tracks
+// postponed dates and clears once refunds settle.
+async function getHeldBalance(organizerId: string): Promise<number> {
+  const [eventHeld, teamHeld] = await Promise.all([
+    pool.query(
+      `SELECT COALESCE(SUM(ep.amount), 0) as held FROM "event_payment" ep
+       JOIN "event" e ON e.id = ep."eventId"
+       WHERE e."organizerId" = $1 AND ep.status = 'completed' AND ep."refundedAt" IS NULL
+         AND (e.status = 'cancelled' OR NOW() < e."endDateTime" + INTERVAL '${WITHDRAWAL_HOLD_HOURS} hours')`,
+      [organizerId]
+    ),
+    pool.query(
+      `SELECT COALESCE(SUM(ttp.amount), 0) as held FROM "tournament_team_payment" ttp
+       JOIN "tournament_team" tt ON tt.id = ttp."teamId"
+       JOIN "event" e ON e.id = tt."tournamentId"
+       WHERE e."organizerId" = $1 AND ttp."refundedAt" IS NULL
+         AND (e.status = 'cancelled' OR NOW() < e."endDateTime" + INTERVAL '${WITHDRAWAL_HOLD_HOURS} hours')`,
+      [organizerId]
+    ),
+  ]);
+  return Number(eventHeld.rows[0].held) + Number(teamHeld.rows[0].held);
+}
 
 export type WalletTransaction = {
   id: string;
@@ -22,11 +50,15 @@ export async function getWalletOverview() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
 
-  const userRow = await pool.query(
-    `SELECT "walletBalance", "stripeConnectAccountId", "stripeConnectOnboarded" FROM "user" WHERE id = $1`,
-    [session.user.id]
-  );
+  const [userRow, held] = await Promise.all([
+    pool.query(
+      `SELECT "walletBalance", "stripeConnectAccountId", "stripeConnectOnboarded" FROM "user" WHERE id = $1`,
+      [session.user.id]
+    ),
+    getHeldBalance(session.user.id),
+  ]);
   const u = userRow.rows[0];
+  const balance = Number(u?.walletBalance ?? 0);
 
   const txRows = await pool.query(
     `SELECT id, type, amount, "balanceAfter", "createdAt" FROM "wallet_transaction"
@@ -35,7 +67,9 @@ export async function getWalletOverview() {
   );
 
   return {
-    balance: Number(u?.walletBalance ?? 0),
+    balance,
+    heldBalance: held,
+    availableBalance: Math.max(0, balance - held),
     connectAccountId: u?.stripeConnectAccountId as string | null,
     connectOnboarded: Boolean(u?.stripeConnectOnboarded),
     transactions: txRows.rows.map((r) => ({
@@ -99,7 +133,17 @@ export async function requestWithdrawal(amountCents: number): Promise<{ error?: 
   );
   const u = userRow.rows[0];
   if (!u?.stripeConnectAccountId) return { error: "Connect a payout account first" };
-  if (Number(u.walletBalance) < amountCents) return { error: "Insufficient balance" };
+
+  const held = await getHeldBalance(session.user.id);
+  const available = Number(u.walletBalance) - held;
+  if (amountCents > available) {
+    return {
+      error:
+        held > 0
+          ? "Some of your balance is held until 48 hours after your event ends"
+          : "Insufficient balance",
+    };
+  }
 
   const account = await stripe.accounts.retrieve(u.stripeConnectAccountId);
   if (!account.payouts_enabled) return { error: "Your payout account isn't fully verified yet" };
@@ -109,9 +153,13 @@ export async function requestWithdrawal(amountCents: number): Promise<{ error?: 
 
   try {
     await withTransaction(async (client) => {
+      // Re-check held inside the transaction, right before the guarded debit,
+      // so two concurrent withdrawal requests from the same organizer can't
+      // both slip past the pre-check above and jointly exceed what's available.
+      const heldNow = await getHeldBalance(session.user.id);
       const debit = await client.query(
-        `UPDATE "user" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" >= $1 RETURNING "walletBalance"`,
-        [amountCents, session.user.id]
+        `UPDATE "user" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" - $3 >= $1 RETURNING "walletBalance"`,
+        [amountCents, session.user.id, heldNow]
       );
       if (debit.rowCount === 0) throw new InsufficientFundsError();
 

@@ -112,11 +112,20 @@ export async function sendEventCancelledEmail(to: string, data: {
   sport: string;
   location: string;
   startDateTime: string;
+  refund?: { amountCents: number; currency: string } | "pending_review";
 }) {
+  const refundNote =
+    data.refund === "pending_review"
+      ? `<p style="margin:0 0 28px;font-size:15px;color:#52525b;line-height:1.6;">Your payment is being reviewed by our team and will be refunded shortly.</p>`
+      : data.refund
+      ? `<p style="margin:0 0 28px;font-size:15px;color:#52525b;line-height:1.6;">Your payment of <strong>${(data.refund.amountCents / 100).toFixed(2)} ${data.refund.currency.toUpperCase()}</strong> has been refunded to your Playver wallet.</p>`
+      : "";
+
   const html = layout(`
     <p style="margin:0 0 6px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#e21d12;">Event cancelled</p>
     <h1 style="margin:0 0 24px;font-size:26px;font-weight:900;color:#18181b;line-height:1.2;">Sorry, ${data.userName} — this event has been cancelled.</h1>
     <p style="margin:0 0 28px;font-size:15px;color:#52525b;line-height:1.6;">The event you registered for has been cancelled by the organizer. We hope to see you at a future event!</p>
+    ${refundNote}
 
     ${detailTable(
       detail("🏟", "Event", data.eventTitle),
@@ -129,6 +138,36 @@ export async function sendEventCancelledEmail(to: string, data: {
   `);
 
   await resend.emails.send({ from: FROM, to, subject: `Cancelled: ${data.eventTitle}`, html });
+}
+
+// ── Event postponed (by organizer / admin) ───────────────────────────────────
+
+export async function sendEventPostponedEmail(to: string, data: {
+  userName: string;
+  eventTitle: string;
+  sport: string;
+  location: string;
+  oldStartDateTime: string;
+  newStartDateTime: string;
+  eventId: string;
+}) {
+  const html = layout(`
+    <p style="margin:0 0 6px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#e21d12;">Event rescheduled</p>
+    <h1 style="margin:0 0 24px;font-size:26px;font-weight:900;color:#18181b;line-height:1.2;">Heads up, ${data.userName} — this event has a new date.</h1>
+    <p style="margin:0 0 28px;font-size:15px;color:#52525b;line-height:1.6;">The organizer has rescheduled <strong>${data.eventTitle}</strong>. You're still registered — no action needed.</p>
+
+    ${detailTable(
+      detail("🏟", "Event", data.eventTitle),
+      detail("🏅", "Sport", data.sport),
+      detail("📍", "Location", data.location),
+      detail("📅", "Was scheduled", fmt(data.oldStartDateTime)),
+      detail("🆕", "New date", fmt(data.newStartDateTime)),
+    )}
+
+    <center>${ctaButton(`${BASE_URL}/events/${data.eventId}`, "View event →")}</center>
+  `);
+
+  await resend.emails.send({ from: FROM, to, subject: `Rescheduled: ${data.eventTitle}`, html });
 }
 
 // ── Removed from event (by admin) ────────────────────────────────────────────

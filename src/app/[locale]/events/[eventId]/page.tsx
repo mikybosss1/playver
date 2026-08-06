@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import EventJoinButton from "@/components/EventJoinButton";
 import EventDetailsTabs from "@/components/EventDetailsTabs";
 import AdminDeleteEventButton from "@/components/AdminDeleteEventButton";
+import EventCancelPostponeButton from "@/components/EventCancelPostponeButton";
 import AdminAddParticipant from "@/components/AdminAddParticipant";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
@@ -125,11 +126,15 @@ export default async function EventDetailsPage({
               <div className="absolute left-6 top-6 rounded-full bg-white px-5 py-2 text-xs font-extrabold uppercase tracking-wide text-[#c32722] shadow-sm">
                 {event.sport}
               </div>
-              {isEnded && (
+              {event.status === "cancelled" ? (
+                <div className="absolute bottom-6 right-6 rounded-full border-2 border-red-300 bg-[#e21d12] px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-white shadow-md">
+                  {t("eventCancelled")}
+                </div>
+              ) : isEnded ? (
                 <div className="absolute bottom-6 right-6 rounded-full border-2 border-red-300 bg-[#e21d12] px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-white shadow-md">
                   {t("eventEnded")}
                 </div>
-              )}
+              ) : null}
             </div>
 
             {isTournament ? (
@@ -238,6 +243,15 @@ export default async function EventDetailsPage({
                             >
                               {t("editTournament")}
                             </Link>
+                            {!isEnded && event.status === "active" && (
+                              <EventCancelPostponeButton
+                                eventId={event.id}
+                                eventTitle={event.title}
+                                startDateTime={event.startDateTime}
+                                endDateTime={event.endDateTime}
+                                isPaid={event.price > 0}
+                              />
+                            )}
                           </>
                         )}
                         {myTeam && isCaptain ? (
@@ -249,7 +263,7 @@ export default async function EventDetailsPage({
                           />
                         ) : myTeam && isMember ? (
                           <TournamentMemberPanel team={myTeam} />
-                        ) : session && !isEnded ? (
+                        ) : session && !isEnded && event.status === "active" ? (
                           <>
                             <TournamentRegisterButton
                               tournamentId={eventId}
@@ -310,12 +324,23 @@ export default async function EventDetailsPage({
                       </span>
                     )}
                     {(isOrganizer || isSuperAdmin) && (
-                      <Link
-                        href={`/events/${event.id}/edit`}
-                        className="block rounded-lg border border-zinc-200 px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
-                      >
-                        {t("editEvent")}
-                      </Link>
+                      <>
+                        <Link
+                          href={`/events/${event.id}/edit`}
+                          className="block rounded-lg border border-zinc-200 px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                        >
+                          {t("editEvent")}
+                        </Link>
+                        {!isEnded && event.status === "active" && (
+                          <EventCancelPostponeButton
+                            eventId={event.id}
+                            eventTitle={event.title}
+                            startDateTime={event.startDateTime}
+                            endDateTime={event.endDateTime}
+                            isPaid={event.price > 0}
+                          />
+                        )}
+                      </>
                     )}
                     {session && (
                       <EventJoinButton
@@ -325,7 +350,7 @@ export default async function EventDetailsPage({
                         leaveLabel={t("leave")}
                         price={event.price}
                         formFields={formFields}
-                        isEnded={isEnded}
+                        isEnded={isEnded || event.status === "cancelled"}
                       />
                     )}
                     {isSuperAdmin && (

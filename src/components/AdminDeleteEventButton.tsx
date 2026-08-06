@@ -22,8 +22,8 @@ export default function AdminDeleteEventButton({
       try {
         await adminDeleteEvent(eventId);
         router.push("/events");
-      } catch {
-        setError("Failed to delete event. Please try again.");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to delete event. Please try again.");
       }
     });
   }

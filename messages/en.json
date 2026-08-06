@@ -185,6 +185,7 @@
     "back": "Back to Events",
     "free": "FREE",
     "eventEnded": "Event has ended",
+    "eventCancelled": "Cancelled",
     "date": "Date",
     "location": "Location",
     "organizedBy": "Organized by",
@@ -309,6 +310,26 @@
     "teamPlayerCount": "{current} / {total} players",
     "joinATeam": "Join a team",
     "maxPlayersPerTeam": "Up to {max} players per team"
+  },
+  "EventCancelPostpone": {
+    "buttonLabel": "Cancel / Postpone",
+    "modalTitle": "Manage Event",
+    "modalSubtitle": "What would you like to do with \"{eventTitle}\"?",
+    "postponeOption": "Postpone (change date)",
+    "cancelOption": "Cancel Event",
+    "close": "Close",
+    "cancelConfirmTitle": "Cancel this event?",
+    "cancelConfirmBody": "Are you sure you want to cancel \"{eventTitle}\"? Everyone signed up will be notified by email. This cannot be undone.",
+    "cancelConfirmPaidBody": "Are you sure you want to cancel \"{eventTitle}\"? Everyone signed up will be notified by email, and paid participants will be automatically refunded to their wallet. This cannot be undone.",
+    "back": "Back",
+    "cancelling": "Cancelling...",
+    "confirmCancel": "Yes, Cancel Event",
+    "postponeTitle": "Postpone Event",
+    "postponeBody": "Pick a new date and time. Everyone signed up will be notified by email — nobody needs to re-register.",
+    "newStart": "New Start",
+    "newEnd": "New End",
+    "postponing": "Saving...",
+    "confirmPostpone": "Save New Date"
   },
   "TournamentPanel": {
     "teamRegistered": "Team registered",
@@ -549,6 +570,8 @@
     "type_withdrawal_reversed": "Withdrawal refunded",
     "errorMinDeposit": "Minimum deposit is $1",
     "errorMinWithdrawal": "Minimum withdrawal is $10",
+    "heldBalanceNote": "{amount} held until 48 hours after your event(s) end",
+    "availableToWithdraw": "Available to withdraw: {amount}",
     "errorGeneric": "Something went wrong — please try again."
   },
   "DashboardSettings": {
