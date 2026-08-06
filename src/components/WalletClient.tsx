@@ -16,6 +16,8 @@ export default function WalletClient({
 }: {
   overview: {
     balance: number;
+    heldBalance: number;
+    availableBalance: number;
     connectAccountId: string | null;
     connectOnboarded: boolean;
     transactions: WalletTransaction[];
@@ -112,6 +114,11 @@ export default function WalletClient({
       <div className="bg-[#e21d12] rounded-2xl p-8 text-white max-w-sm shadow-md">
         <p className="text-sm font-semibold opacity-80 mb-1">{t("balanceLabel")}</p>
         <p className="text-4xl font-bold">{formatPrice(overview.balance)}</p>
+        {overview.heldBalance > 0 && (
+          <p className="mt-3 text-xs font-semibold opacity-80">
+            {t("heldBalanceNote", { amount: formatPrice(overview.heldBalance) })}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-8 sm:grid-cols-2">
@@ -175,6 +182,9 @@ export default function WalletClient({
             </div>
           ) : (
             <form onSubmit={handleWithdraw} className="flex flex-col gap-5">
+              <p className="text-xs text-zinc-500">
+                {t("availableToWithdraw", { amount: formatPrice(overview.availableBalance) })}
+              </p>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-zinc-700">{t("withdrawAmountLabel")}</label>
                 <div className="relative">
@@ -182,6 +192,7 @@ export default function WalletClient({
                   <input
                     type="number"
                     min="10"
+                    max={overview.availableBalance / 100}
                     step="0.01"
                     placeholder="0.00"
                     value={withdrawAmount}

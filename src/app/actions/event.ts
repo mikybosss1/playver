@@ -2,9 +2,11 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import type { PoolClient } from "@neondatabase/serverless";
 import { auth } from "@/lib/auth";
 import { pool, withTransaction } from "@/lib/db";
-import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail, sendPaymentReceiptEmail } from "@/lib/emails";
+import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail, sendPaymentReceiptEmail, sendEventCancelledEmail, sendEventPostponedEmail } from "@/lib/emails";
+import { resend, FROM, layout, ctaButton, BASE_URL } from "@/lib/emails/_shared";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
 
 let eventParticipantsTablePromise: Promise<void> | null = null;
@@ -113,6 +115,7 @@ type EventRow = {
   organizerName: string;
   customFormEnabled: boolean;
   price: number;
+  status: "active" | "cancelled";
   createdAt: Date | string;
   updatedAt: Date | string;
   participantCount: string | number;
@@ -493,10 +496,11 @@ export async function joinEvent(eventId: string): Promise<{ error?: string }> {
     await ensureEventParticipantsTable();
 
     const event = await pool.query(
-      `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
+      `SELECT id, title, sport, location, "organizerId", capacity, status, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
       [eventId]
     );
     if (event.rows.length === 0) return { error: "Event not found" };
+    if (event.rows[0].status === "cancelled") return { error: "This event has been cancelled" };
     if (new Date(event.rows[0].endDateTime) < new Date()) return { error: "Event has ended" };
 
     if (event.rows[0].capacity) {
@@ -590,11 +594,12 @@ export async function payForEventWithWallet(eventId: string): Promise<{ error?: 
     await ensureEventParticipantsTable();
 
     const eventRes = await pool.query(
-      `SELECT id, title, sport, location, "organizerId", capacity, price, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
+      `SELECT id, title, sport, location, "organizerId", capacity, price, status, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
       [eventId]
     );
     const event = eventRes.rows[0];
     if (!event) return { error: "Event not found" };
+    if (event.status === "cancelled") return { error: "This event has been cancelled" };
     if (!event.price) return { error: "Event is free" };
     if (new Date(event.endDateTime) < new Date()) return { error: "Event has ended" };
 
@@ -775,6 +780,306 @@ export async function updateEvent(eventId: string, data: {
   revalidatePath("/", "layout");
 }
 
+async function getEventSignupRecipients(
+  eventId: string,
+  isTournament: boolean
+): Promise<{ userId: string; name: string | null; email: string }[]> {
+  if (isTournament) {
+    const result = await pool.query(
+      `SELECT DISTINCT u.id as "userId", u.name, u.email FROM (
+         SELECT "captainId" as "userId" FROM "tournament_team" WHERE "tournamentId" = $1
+         UNION
+         SELECT ttm."userId" FROM "tournament_team_member" ttm
+         JOIN "tournament_team" tt ON tt.id = ttm."teamId"
+         WHERE tt."tournamentId" = $1
+       ) participants
+       JOIN "user" u ON u.id = participants."userId"
+       WHERE u.email IS NOT NULL`,
+      [eventId]
+    );
+    return result.rows;
+  }
+  const result = await pool.query(
+    `SELECT DISTINCT u.id as "userId", u.name, u.email FROM "event_participant" ep
+     JOIN "user" u ON u.id = ep."userId"
+     WHERE ep."eventId" = $1 AND u.email IS NOT NULL`,
+    [eventId]
+  );
+  return result.rows;
+}
+
+async function notifyAdminsOfRefundIssues(
+  eventTitle: string,
+  eventId: string,
+  failures: { payerName: string | null; amountCents: number; reason: string }[]
+) {
+  const admins = await pool.query(`SELECT email FROM "user" WHERE role = 'super_admin' AND email IS NOT NULL`);
+  if (admins.rows.length === 0) return;
+
+  const failureRows = failures
+    .map(
+      (f) =>
+        `<li>${f.payerName ?? "Unknown"} — ${f.amountCents > 0 ? `${(f.amountCents / 100).toFixed(2)} CAD — ` : ""}${f.reason}</li>`
+    )
+    .join("");
+
+  const html = layout(`
+    <p style="margin:0 0 6px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#e21d12;">Refunds need review</p>
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:900;color:#18181b;">Cancelling "${eventTitle}" left some payments unrefunded</h1>
+    <ul style="font-size:14px;color:#52525b;line-height:1.8;">${failureRows}</ul>
+    <center>${ctaButton(`${BASE_URL}/events/${eventId}`, "View event →")}</center>
+  `);
+
+  await Promise.all(
+    admins.rows.map((row: { email: string }) =>
+      resend.emails
+        .send({ from: FROM, to: row.email, subject: `Action needed: refunds for "${eventTitle}"`, html })
+        .catch(() => {})
+    )
+  );
+}
+
+// Refunds every still-unrefunded wallet-funded payment for this event/tournament,
+// reversing the original payForEventWithWallet/payForTeamWithWallet transfer
+// (organizer debited, payer credited). Gated purely on refundedAt IS NULL — not on
+// event.status — so it's safe to call again later if a run is interrupted partway.
+// Sequential on purpose: the shared Pool is capped at max:10, so refunding a large
+// tournament's teams concurrently would starve every other in-flight request.
+export async function runEventRefundSweep(
+  eventId: string
+): Promise<{ refunded: Map<string, number>; pendingReview: Set<string> }> {
+  const refunded = new Map<string, number>();
+  const pendingReview = new Set<string>();
+  const failures: { payerName: string | null; amountCents: number; reason: string }[] = [];
+
+  const eventRes = await pool.query(`SELECT title, "eventType", "organizerId" FROM "event" WHERE id = $1`, [eventId]);
+  const event = eventRes.rows[0];
+  if (!event) return { refunded, pendingReview };
+  const isTournament = event.eventType === "Tournament";
+  const organizerId = event.organizerId as string;
+
+  async function refundOne(
+    payerId: string,
+    amount: number,
+    refKind: "eventId" | "teamId",
+    refId: string,
+    markRefunded: (client: PoolClient) => Promise<void>
+  ) {
+    // Fixed sorted lock order, same invariant as payForEventWithWallet/payForTeamWithWallet —
+    // but direction is REVERSED here: organizer is debited, payer is credited.
+    await withTransaction(async (client) => {
+      const orderedIds = [organizerId, payerId].sort();
+      let organizerBalanceAfter = 0;
+      for (const id of orderedIds) {
+        if (id === organizerId) {
+          const debit = await client.query(
+            `UPDATE "user" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" >= $1 RETURNING "walletBalance"`,
+            [amount, organizerId]
+          );
+          if (debit.rowCount === 0) throw new Error("Organizer balance too low to refund");
+          organizerBalanceAfter = Number(debit.rows[0].walletBalance);
+        } else {
+          await client.query(`UPDATE "user" SET "walletBalance" = "walletBalance" + $1 WHERE id = $2`, [amount, payerId]);
+        }
+      }
+      const payerBalanceRes = await client.query(`SELECT "walletBalance" FROM "user" WHERE id = $1`, [payerId]);
+
+      await client.query(
+        `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "${refKind}")
+         VALUES ($1, $2, 'refund_sent', $3, $4, $5)`,
+        [crypto.randomUUID(), organizerId, -amount, organizerBalanceAfter, refId]
+      );
+      await client.query(
+        `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "${refKind}")
+         VALUES ($1, $2, 'refund_received', $3, $4, $5)`,
+        [crypto.randomUUID(), payerId, amount, payerBalanceRes.rows[0].walletBalance, refId]
+      );
+      await markRefunded(client);
+    });
+  }
+
+  if (isTournament) {
+    const rows = await pool.query(
+      `SELECT ttp.id, ttp."teamId", ttp."userId", ttp.amount, u.name as "payerName"
+       FROM "tournament_team_payment" ttp
+       JOIN "tournament_team" tt ON tt.id = ttp."teamId"
+       JOIN "user" u ON u.id = ttp."userId"
+       WHERE tt."tournamentId" = $1 AND ttp."refundedAt" IS NULL
+       ORDER BY ttp."createdAt" ASC`,
+      [eventId]
+    );
+    for (const row of rows.rows) {
+      const payerId = row.userId as string;
+      const amount = Number(row.amount);
+      try {
+        await refundOne(payerId, amount, "teamId", row.teamId, (client) =>
+          client.query(`UPDATE "tournament_team_payment" SET "refundedAt" = NOW() WHERE id = $1`, [row.id]).then(() => {})
+        );
+        refunded.set(payerId, amount);
+      } catch (e) {
+        pendingReview.add(payerId);
+        failures.push({ payerName: row.payerName, amountCents: amount, reason: e instanceof Error ? e.message : "Unknown error" });
+      }
+    }
+  } else {
+    const rows = await pool.query(
+      `SELECT ep.id, ep."userId", ep.amount, u.name as "payerName"
+       FROM "event_payment" ep
+       JOIN "user" u ON u.id = ep."userId"
+       WHERE ep."eventId" = $1 AND ep.status = 'completed' AND ep.method = 'wallet' AND ep."refundedAt" IS NULL
+       ORDER BY ep."createdAt" ASC`,
+      [eventId]
+    );
+    for (const row of rows.rows) {
+      const payerId = row.userId as string;
+      const amount = Number(row.amount);
+      try {
+        await refundOne(payerId, amount, "eventId", eventId, (client) =>
+          client
+            .query(`UPDATE "event_payment" SET status = 'refunded', "refundedAt" = NOW() WHERE id = $1`, [row.id])
+            .then(() => {})
+        );
+        refunded.set(payerId, amount);
+      } catch (e) {
+        pendingReview.add(payerId);
+        failures.push({ payerName: row.payerName, amountCents: amount, reason: e instanceof Error ? e.message : "Unknown error" });
+      }
+    }
+
+    // Pre-wallet-system payments — a real Stripe charge, not a wallet transfer.
+    // Refunding these needs stripe.refunds.create against the original charge, which
+    // is a materially different (and riskier) operation than a wallet reversal, so
+    // they're flagged for manual review instead of auto-refunded.
+    const legacyRows = await pool.query(
+      `SELECT ep."userId", u.name as "payerName" FROM "event_payment" ep
+       JOIN "user" u ON u.id = ep."userId"
+       WHERE ep."eventId" = $1 AND ep.status = 'completed' AND ep.method = 'stripe'`,
+      [eventId]
+    );
+    for (const row of legacyRows.rows) {
+      pendingReview.add(row.userId);
+      failures.push({ payerName: row.payerName, amountCents: 0, reason: "legacy Stripe payment — needs manual refund" });
+    }
+  }
+
+  if (failures.length > 0) {
+    await notifyAdminsOfRefundIssues(event.title, eventId, failures).catch(() => {});
+  }
+
+  return { refunded, pendingReview };
+}
+
+export async function cancelEvent(eventId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+
+    const [existing, roleRow] = await Promise.all([
+      pool.query(
+        `SELECT "organizerId", "eventType", title, sport, location, "startDateTime" FROM "event" WHERE id = $1`,
+        [eventId]
+      ),
+      pool.query(`SELECT role FROM "user" WHERE id = $1`, [session.user.id]),
+    ]);
+    if (!existing.rows[0]) return { error: "Event not found" };
+    const isSuperAdmin = roleRow.rows[0]?.role === "super_admin";
+    if (existing.rows[0].organizerId !== session.user.id && !isSuperAdmin) return { error: "Forbidden" };
+
+    const flip = await pool.query(
+      `UPDATE "event" SET status = 'cancelled', "updatedAt" = NOW() WHERE id = $1 AND status = 'active' RETURNING id`,
+      [eventId]
+    );
+    if (flip.rowCount === 0) return { error: "Event already cancelled" };
+
+    const { refunded, pendingReview } = await runEventRefundSweep(eventId);
+
+    const eventRow = existing.rows[0];
+    const isTournament = eventRow.eventType === "Tournament";
+    const recipients = await getEventSignupRecipients(eventId, isTournament);
+
+    for (const recipient of recipients) {
+      const refundedAmount = refunded.get(recipient.userId);
+      sendEventCancelledEmail(recipient.email, {
+        userName: recipient.name ?? "Athlete",
+        eventTitle: eventRow.title,
+        sport: eventRow.sport,
+        location: eventRow.location,
+        startDateTime: new Date(eventRow.startDateTime).toISOString(),
+        refund:
+          refundedAmount !== undefined
+            ? { amountCents: refundedAmount, currency: "cad" }
+            : pendingReview.has(recipient.userId)
+            ? "pending_review"
+            : undefined,
+      }).catch(() => {});
+    }
+
+    revalidatePath(`/events/${eventId}`);
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (e) {
+    console.error("[cancelEvent]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+export async function postponeEvent(
+  eventId: string,
+  newStartDateTime: string,
+  newEndDateTime: string
+): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+
+    const [existing, roleRow] = await Promise.all([
+      pool.query(
+        `SELECT "organizerId", "eventType", title, sport, location, "startDateTime" FROM "event" WHERE id = $1`,
+        [eventId]
+      ),
+      pool.query(`SELECT role FROM "user" WHERE id = $1`, [session.user.id]),
+    ]);
+    if (!existing.rows[0]) return { error: "Event not found" };
+    const isSuperAdmin = roleRow.rows[0]?.role === "super_admin";
+    if (existing.rows[0].organizerId !== session.user.id && !isSuperAdmin) return { error: "Forbidden" };
+
+    if (new Date(newEndDateTime) <= new Date(newStartDateTime)) return { error: "End date must be after start date" };
+    if (new Date(newStartDateTime) < new Date()) return { error: "New date must be in the future" };
+
+    const eventRow = existing.rows[0];
+    const oldStartDateTime = new Date(eventRow.startDateTime).toISOString();
+
+    const flip = await pool.query(
+      `UPDATE "event" SET "startDateTime" = $2, "endDateTime" = $3, "updatedAt" = NOW() WHERE id = $1 AND status = 'active' RETURNING id`,
+      [eventId, newStartDateTime, newEndDateTime]
+    );
+    if (flip.rowCount === 0) return { error: "Event is cancelled and can't be rescheduled" };
+
+    const isTournament = eventRow.eventType === "Tournament";
+    const recipients = await getEventSignupRecipients(eventId, isTournament);
+    for (const recipient of recipients) {
+      sendEventPostponedEmail(recipient.email, {
+        userName: recipient.name ?? "Athlete",
+        eventTitle: eventRow.title,
+        sport: eventRow.sport,
+        location: eventRow.location,
+        oldStartDateTime,
+        newStartDateTime: new Date(newStartDateTime).toISOString(),
+        eventId,
+      }).catch(() => {});
+    }
+
+    revalidatePath(`/events/${eventId}`);
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (e) {
+    console.error("[postponeEvent]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
 export async function getEventFormFields(eventId: string): Promise<FormField[]> {
   await ensureFormTables();
   const result = await pool.query(
@@ -809,10 +1114,11 @@ export async function joinEventWithForm(
     await ensureFormTables();
 
     const event = await pool.query(
-      `SELECT id, title, sport, location, "organizerId", capacity, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
+      `SELECT id, title, sport, location, "organizerId", capacity, status, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
       [eventId]
     );
     if (event.rows.length === 0) return { error: "Event not found" };
+    if (event.rows[0].status === "cancelled") return { error: "This event has been cancelled" };
     if (new Date(event.rows[0].endDateTime) < new Date()) return { error: "Event has ended" };
 
     if (event.rows[0].capacity) {

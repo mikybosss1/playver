@@ -39,6 +39,7 @@ export default function EventCard({
   event,
   freeLabel,
   endedLabel,
+  cancelledLabel,
   joinedLabel,
   organizerLabel,
   onViewed,
@@ -48,6 +49,7 @@ export default function EventCard({
   event: EventItem;
   freeLabel: string;
   endedLabel: string;
+  cancelledLabel?: string;
   joinedLabel: string;
   organizerLabel: string;
   onViewed?: (event: EventItem) => void;
@@ -55,6 +57,7 @@ export default function EventCard({
   action?: React.ReactNode;
 }) {
   const isEnded = new Date(event.endDateTime) < new Date();
+  const isCancelled = event.status === "cancelled";
   const capacity = event.capacity ?? 0;
   const progress = capacity > 0 ? Math.min((event.participantCount / capacity) * 100, 100) : 0;
   const cover = event.coverImageUrl;
@@ -70,11 +73,15 @@ export default function EventCard({
       <div className="absolute left-5 top-5 rounded-full bg-white px-5 py-2 text-xs font-extrabold uppercase tracking-wide text-[#c32722] shadow-sm">
         {event.sport}
       </div>
-      {isEnded && (
+      {isCancelled ? (
+        <div className="absolute bottom-5 right-5 rounded-full border-2 border-red-300 bg-[#e21d12] px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-white shadow-md">
+          {cancelledLabel ?? "Cancelled"}
+        </div>
+      ) : isEnded ? (
         <div className="absolute bottom-5 right-5 rounded-full border-2 border-red-300 bg-[#e21d12] px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-white shadow-md">
           {endedLabel}
         </div>
-      )}
+      ) : null}
     </>
   );
 

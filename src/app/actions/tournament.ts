@@ -354,11 +354,12 @@ async function ensureTeamMemberTable() {
 
 async function checkCanRegister(tournamentId: string, userId: string) {
   const tournamentRes = await pool.query(
-    `SELECT id, "endDateTime", price, capacity, sport, location FROM "event" WHERE id = $1 AND "eventType" = 'Tournament'`,
+    `SELECT id, status, "endDateTime", price, capacity, sport, location FROM "event" WHERE id = $1 AND "eventType" = 'Tournament'`,
     [tournamentId]
   );
   if (!tournamentRes.rows[0]) return { error: "Tournament not found" as string };
   const tournament = tournamentRes.rows[0];
+  if (tournament.status === "cancelled") return { error: "This tournament has been cancelled" as string };
   if (new Date(tournament.endDateTime) < new Date()) return { error: "Tournament has ended" as string };
 
   const existingTeam = await pool.query(
@@ -951,7 +952,7 @@ export async function payForTeamWithWallet(teamId: string): Promise<{ error?: st
     await ensureTournamentTables();
 
     const result = await pool.query(
-      `SELECT tt.id, tt.name, tt."captainId", tt.status, e.title, e.sport, e.location, e.price,
+      `SELECT tt.id, tt.name, tt."captainId", tt.status, e.title, e.sport, e.location, e.price, e.status as "tournamentStatus",
               e.id as "tournamentId", e."organizerId", e."startDateTime", e."endDateTime"
        FROM "tournament_team" tt
        JOIN "event" e ON e.id = tt."tournamentId"
@@ -961,6 +962,7 @@ export async function payForTeamWithWallet(teamId: string): Promise<{ error?: st
     const team = result.rows[0];
     if (!team) return { error: "Team not found" };
     if (team.captainId !== session.user.id) return { error: "Forbidden" };
+    if (team.tournamentStatus === "cancelled") return { error: "This tournament has been cancelled" };
     if (!team.price) return { error: "Tournament is free" };
     if (new Date(team.endDateTime) < new Date()) return { error: "Tournament has ended" };
     if (team.captainId === team.organizerId) return { error: "You can't pay to join your own tournament" };

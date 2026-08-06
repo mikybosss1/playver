@@ -36,18 +36,23 @@ export async function GET(request: Request) {
       FROM "event_participant" ep
       JOIN "event" e ON e.id = ep."eventId"
       JOIN "user" u  ON u.id = ep."userId"
-      WHERE ${between} AND u.email IS NOT NULL
+      WHERE ${between} AND u.email IS NOT NULL AND e.status = 'active'
     `);
 
-    // Tournament team members (captain is included via tournament_team_member insert at creation)
+    // Tournament team members — union captains + tournament_team_member rows,
+    // since a captain is not automatically inserted into tournament_team_member.
     const tournament = await pool.query(`
       SELECT e.id, e.title, e.sport, e.location, e."startDateTime",
              u.name AS "userName", u.email
-      FROM "tournament_team_member" ttm
-      JOIN "tournament_team" tt ON tt.id = ttm."teamId"
-      JOIN "event" e ON e.id = tt."eventId"
-      JOIN "user" u  ON u.id = ttm."userId"
-      WHERE ${between} AND u.email IS NOT NULL
+      FROM (
+        SELECT id AS "teamId", "captainId" AS "userId" FROM "tournament_team"
+        UNION
+        SELECT "teamId", "userId" FROM "tournament_team_member"
+      ) participants
+      JOIN "tournament_team" tt ON tt.id = participants."teamId"
+      JOIN "event" e ON e.id = tt."tournamentId"
+      JOIN "user" u ON u.id = participants."userId"
+      WHERE ${between} AND u.email IS NOT NULL AND e.status = 'active'
     `);
 
     // Deduplicate by email+eventId so nobody gets two emails for the same reminder
