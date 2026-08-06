@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { joinEvent, leaveEvent, joinEventWithForm } from "@/app/actions/event";
+import { joinEvent, leaveEvent, joinEventWithForm, payForEventWithWallet } from "@/app/actions/event";
 import { useUploadThing } from "@/lib/uploadthing";
 import { formatPrice } from "@/lib/format-price";
 import type { FormField, FormResponseInput } from "@/app/actions/event";
@@ -34,6 +35,7 @@ export default function EventJoinButton({
   const [fileUploading, setFileUploading] = useState<Record<string, boolean>>({});
   const [formError, setFormError] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [insufficientFunds, setInsufficientFunds] = useState(false);
   const router = useRouter();
   const { startUpload } = useUploadThing("registrationFile");
 
@@ -42,16 +44,15 @@ export default function EventJoinButton({
   async function handleJoinClick() {
     if (price > 0) {
       setPaymentLoading(true);
-      try {
-        const res = await fetch("/api/stripe/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId }),
-        });
-        const { url } = await res.json();
-        if (url) window.location.href = url;
-      } catch {
-        // keep current state
+      setJoinError("");
+      setInsufficientFunds(false);
+      const result = await payForEventWithWallet(eventId);
+      if (result.error) {
+        setJoinError(result.error);
+        setInsufficientFunds(result.error === "Insufficient wallet balance");
+      } else {
+        setJoined(true);
+        router.refresh();
       }
       setPaymentLoading(false);
       return;
@@ -162,7 +163,17 @@ export default function EventJoinButton({
         </button>
       )}
       {joinError && (
-        <p className="text-xs font-semibold text-red-600 text-center">{joinError}</p>
+        <p className="text-xs font-semibold text-red-600 text-center">
+          {joinError}
+          {insufficientFunds && (
+            <>
+              {" — "}
+              <Link href="/dashboard/wallet" className="underline">
+                {t("addFundsLink")}
+              </Link>
+            </>
+          )}
+        </p>
       )}
 
       {showModal && (

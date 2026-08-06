@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { createTournamentTeam, importExistingTeamForTournament } from "@/app/actions/tournament";
+import { createTournamentTeam, importExistingTeamForTournament, payForTeamWithWallet } from "@/app/actions/tournament";
 import type { MyTeamOption } from "@/app/actions/tournament";
 
 type Mode = "new" | "existing";
@@ -28,6 +29,8 @@ export default function TournamentRegisterButton({
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [insufficientFunds, setInsufficientFunds] = useState(false);
   const router = useRouter();
 
   const max = maxPlayersPerTeam ?? 20;
@@ -51,18 +54,16 @@ export default function TournamentRegisterButton({
     }
   }
 
-  async function redirectToPayment(teamId: string) {
+  async function payFromWallet(teamId: string) {
     setPaymentLoading(true);
-    try {
-      const res = await fetch("/api/stripe/tournament-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId }),
-      });
-      const { url } = await res.json();
-      if (url) { window.location.href = url; return; }
-    } catch {
-      // fall through
+    setPaymentError("");
+    setInsufficientFunds(false);
+    const result = await payForTeamWithWallet(teamId);
+    if (result.error) {
+      setPaymentError(result.error);
+      setInsufficientFunds(result.error === "Insufficient wallet balance");
+    } else {
+      router.refresh();
     }
     setPaymentLoading(false);
   }
@@ -84,7 +85,7 @@ export default function TournamentRegisterButton({
       setShowModal(false);
 
       if (price > 0 && result.teamId) {
-        await redirectToPayment(result.teamId);
+        await payFromWallet(result.teamId);
         return;
       }
 
@@ -102,6 +103,19 @@ export default function TournamentRegisterButton({
       >
         {paymentLoading ? t("redirecting") : t("registerButton")}
       </button>
+      {paymentError && (
+        <p className="mt-2 text-xs font-semibold text-red-600 text-center">
+          {paymentError}
+          {insufficientFunds && (
+            <>
+              {" — "}
+              <Link href="/dashboard/wallet" className="underline">
+                {t("addFundsLink")}
+              </Link>
+            </>
+          )}
+        </p>
+      )}
 
       {showModal && (
         <div
