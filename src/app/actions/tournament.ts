@@ -3,8 +3,13 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { pool } from "@/lib/db";
-import { sendTournamentMemberInviteEmail, sendJoinRequestNotificationEmail, sendTournamentTeamRegisteredEmail } from "@/lib/emails";
+import { pool, withTransaction } from "@/lib/db";
+import {
+  sendTournamentMemberInviteEmail,
+  sendJoinRequestNotificationEmail,
+  sendTournamentTeamRegisteredEmail,
+  sendTournamentTeamPaymentReceiptEmail,
+} from "@/lib/emails";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
 import { assertCanManageTournament } from "@/app/actions/game";
 
@@ -937,21 +942,108 @@ export async function disbandTournamentTeam(teamId: string): Promise<{ error?: s
   }
 }
 
-export async function activateTournamentTeam(teamId: string): Promise<{ error?: string }> {
+class InsufficientFundsError extends Error {}
+
+export async function payForTeamWithWallet(teamId: string): Promise<{ error?: string }> {
   try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
     await ensureTournamentTables();
-    const res = await pool.query(
-      `UPDATE "tournament_team" SET status = 'active', "paymentDeadline" = NULL
-       WHERE id = $1
-       RETURNING "tournamentId"`,
+
+    const result = await pool.query(
+      `SELECT tt.id, tt.name, tt."captainId", tt.status, e.title, e.sport, e.location, e.price,
+              e.id as "tournamentId", e."organizerId", e."startDateTime", e."endDateTime"
+       FROM "tournament_team" tt
+       JOIN "event" e ON e.id = tt."tournamentId"
+       WHERE tt.id = $1`,
       [teamId]
     );
-    if (res.rows[0]) {
-      revalidatePath(`/events/${res.rows[0].tournamentId}`);
+    const team = result.rows[0];
+    if (!team) return { error: "Team not found" };
+    if (team.captainId !== session.user.id) return { error: "Forbidden" };
+    if (!team.price) return { error: "Tournament is free" };
+    if (new Date(team.endDateTime) < new Date()) return { error: "Tournament has ended" };
+    if (team.captainId === team.organizerId) return { error: "You can't pay to join your own tournament" };
+
+    const price = Number(team.price);
+    const payerId = team.captainId as string;
+    const organizerId = team.organizerId as string;
+
+    let alreadyActive = false;
+    try {
+      await withTransaction(async (client) => {
+        const activateRes = await client.query(
+          `UPDATE "tournament_team" SET status = 'active', "paymentDeadline" = NULL
+           WHERE id = $1 AND status = 'pending' RETURNING "tournamentId"`,
+          [teamId]
+        );
+        if (activateRes.rowCount === 0) {
+          alreadyActive = true;
+          return;
+        }
+
+        // Fixed (sorted) lock order across the two user rows, regardless of who's
+        // paying whom, so concurrent transfers between the same pair can't deadlock.
+        const orderedIds = [payerId, organizerId].sort();
+        let payerBalanceAfter = 0;
+        for (const id of orderedIds) {
+          if (id === payerId) {
+            const debit = await client.query(
+              `UPDATE "user" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" >= $1 RETURNING "walletBalance"`,
+              [price, payerId]
+            );
+            if (debit.rowCount === 0) throw new InsufficientFundsError();
+            payerBalanceAfter = Number(debit.rows[0].walletBalance);
+          } else {
+            await client.query(`UPDATE "user" SET "walletBalance" = "walletBalance" + $1 WHERE id = $2`, [price, organizerId]);
+          }
+        }
+        const organizerBalanceRes = await client.query(`SELECT "walletBalance" FROM "user" WHERE id = $1`, [organizerId]);
+
+        await client.query(
+          `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "teamId")
+           VALUES ($1, $2, 'event_payment_sent', $3, $4, $5)`,
+          [crypto.randomUUID(), payerId, -price, payerBalanceAfter, teamId]
+        );
+        await client.query(
+          `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "teamId")
+           VALUES ($1, $2, 'event_payment_received', $3, $4, $5)`,
+          [crypto.randomUUID(), organizerId, price, organizerBalanceRes.rows[0].walletBalance, teamId]
+        );
+
+        await client.query(
+          `INSERT INTO "tournament_team_payment" (id, "teamId", "userId", amount) VALUES ($1, $2, $3, $4)`,
+          [crypto.randomUUID(), teamId, payerId, price]
+        );
+      });
+    } catch (e) {
+      if (e instanceof InsufficientFundsError) return { error: "Insufficient wallet balance" };
+      throw e;
     }
+
+    if (alreadyActive) return {};
+
+    const captainRow = await pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [payerId]);
+    const captain = captainRow.rows[0];
+    if (captain?.email) {
+      sendTournamentTeamPaymentReceiptEmail(captain.email, {
+        captainName: captain.name ?? "Captain",
+        teamName: team.name,
+        tournamentTitle: team.title,
+        sport: team.sport,
+        location: team.location,
+        startDateTime: new Date(team.startDateTime).toISOString(),
+        tournamentId: team.tournamentId,
+        amountCents: price,
+        currency: "cad",
+      }).catch(() => {});
+    }
+
+    revalidatePath(`/events/${team.tournamentId}`);
+    revalidatePath("/dashboard/tournaments");
     return {};
   } catch (e) {
-    console.error("[activateTournamentTeam]", e);
+    console.error("[payForTeamWithWallet]", e);
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }

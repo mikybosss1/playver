@@ -3,8 +3,8 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { pool } from "@/lib/db";
-import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail } from "@/lib/emails";
+import { pool, withTransaction } from "@/lib/db";
+import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail, sendPaymentReceiptEmail } from "@/lib/emails";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
 
 let eventParticipantsTablePromise: Promise<void> | null = null;
@@ -524,6 +524,154 @@ export async function joinEvent(eventId: string): Promise<{ error?: string }> {
     return {};
   } catch (e) {
     console.error("[joinEvent]", e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+class InsufficientFundsError extends Error {}
+
+async function firePaymentEmails(
+  payerId: string,
+  eventId: string,
+  eventRow: { title: string; sport: string; location: string; startDateTime: Date | string; organizerId: string; capacity: number | null },
+  amountCents: number
+) {
+  const [payerRow, organizerRow] = await Promise.all([
+    pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [payerId]),
+    pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [eventRow.organizerId]),
+  ]);
+  const payer = payerRow.rows[0];
+  const org = organizerRow.rows[0];
+  const emailData = {
+    eventTitle: eventRow.title,
+    sport: eventRow.sport,
+    location: eventRow.location,
+    startDateTime: new Date(eventRow.startDateTime).toISOString(),
+    eventId,
+  };
+  if (payer?.email) {
+    sendPaymentReceiptEmail(payer.email, {
+      userName: payer.name ?? "Athlete",
+      amountCents,
+      currency: "cad",
+      ...emailData,
+    }).catch(() => {});
+  }
+  if (org?.email) {
+    let participantCount = 1;
+    let isFull = false;
+    if (eventRow.capacity) {
+      const countRes = await pool.query(`SELECT COUNT(*) FROM "event_participant" WHERE "eventId" = $1`, [eventId]);
+      participantCount = Number(countRes.rows[0].count);
+      isFull = participantCount >= Number(eventRow.capacity);
+    }
+    sendNewParticipantEmail(org.email, {
+      organizerName: org.name ?? "Organizer",
+      participantName: payer?.name ?? "Athlete",
+      participantCount,
+      capacity: eventRow.capacity ? Number(eventRow.capacity) : null,
+      ...emailData,
+    }).catch(() => {});
+    if (isFull) {
+      sendEventFullEmail(org.email, {
+        organizerName: org.name ?? "Organizer",
+        eventTitle: eventRow.title,
+        eventId,
+        capacity: Number(eventRow.capacity),
+      }).catch(() => {});
+    }
+  }
+}
+
+export async function payForEventWithWallet(eventId: string): Promise<{ error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { error: "Unauthorized" };
+    await ensureEventParticipantsTable();
+
+    const eventRes = await pool.query(
+      `SELECT id, title, sport, location, "organizerId", capacity, price, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
+      [eventId]
+    );
+    const event = eventRes.rows[0];
+    if (!event) return { error: "Event not found" };
+    if (!event.price) return { error: "Event is free" };
+    if (new Date(event.endDateTime) < new Date()) return { error: "Event has ended" };
+
+    if (event.capacity) {
+      const participants = await pool.query(`SELECT COUNT(*) FROM "event_participant" WHERE "eventId" = $1`, [eventId]);
+      if (Number(participants.rows[0].count) >= Number(event.capacity)) return { error: "Event is full" };
+    }
+
+    const price = Number(event.price);
+    const payerId = session.user.id;
+    const organizerId = event.organizerId as string;
+    if (payerId === organizerId) return { error: "You can't pay to join your own event" };
+
+    let alreadyJoined = false;
+    try {
+      await withTransaction(async (client) => {
+        const insertRes = await client.query(
+          `INSERT INTO "event_participant" (id, "eventId", "userId") VALUES ($1, $2, $3)
+           ON CONFLICT ("eventId", "userId") DO NOTHING RETURNING id`,
+          [crypto.randomUUID(), eventId, payerId]
+        );
+        if (insertRes.rowCount === 0) {
+          alreadyJoined = true;
+          return;
+        }
+
+        // Touch the two user rows in a fixed (sorted) order across every payment,
+        // regardless of who's paying whom, so concurrent transfers between the same
+        // pair of users can't deadlock by locking rows in opposite order.
+        const orderedIds = [payerId, organizerId].sort();
+        let payerBalanceAfter = 0;
+        for (const id of orderedIds) {
+          if (id === payerId) {
+            const debit = await client.query(
+              `UPDATE "user" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" >= $1 RETURNING "walletBalance"`,
+              [price, payerId]
+            );
+            if (debit.rowCount === 0) throw new InsufficientFundsError();
+            payerBalanceAfter = Number(debit.rows[0].walletBalance);
+          } else {
+            await client.query(`UPDATE "user" SET "walletBalance" = "walletBalance" + $1 WHERE id = $2`, [price, organizerId]);
+          }
+        }
+        const organizerBalanceRes = await client.query(`SELECT "walletBalance" FROM "user" WHERE id = $1`, [organizerId]);
+
+        await client.query(
+          `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "eventId")
+           VALUES ($1, $2, 'event_payment_sent', $3, $4, $5)`,
+          [crypto.randomUUID(), payerId, -price, payerBalanceAfter, eventId]
+        );
+        await client.query(
+          `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "eventId")
+           VALUES ($1, $2, 'event_payment_received', $3, $4, $5)`,
+          [crypto.randomUUID(), organizerId, price, organizerBalanceRes.rows[0].walletBalance, eventId]
+        );
+
+        await client.query(
+          `INSERT INTO "event_payment" (id, "eventId", "userId", amount, currency, status, method)
+           VALUES ($1, $2, $3, $4, 'cad', 'completed', 'wallet')`,
+          [crypto.randomUUID(), eventId, payerId, price]
+        );
+      });
+    } catch (e) {
+      if (e instanceof InsufficientFundsError) return { error: "Insufficient wallet balance" };
+      throw e;
+    }
+
+    if (alreadyJoined) return {};
+
+    firePaymentEmails(payerId, eventId, event, price).catch(() => {});
+
+    revalidatePath(`/events/${eventId}`);
+    revalidatePath("/events");
+    revalidatePath("/dashboard");
+    return {};
+  } catch (e) {
+    console.error("[payForEventWithWallet]", e);
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }
