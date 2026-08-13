@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getUserRole, getAllUsers } from "@/app/actions/admin";
-import RolesClient from "@/components/RolesClient";
+import RolesClient from "@/components/dashboard/RolesClient";
 
 export default async function RolesPage() {
   const [session, t] = await Promise.all([

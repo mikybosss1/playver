@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { pool, withTransaction } from "@/lib/db";
 import { resend, FROM, layout } from "@/lib/emails/_shared";
+import { completeEventStripePayment } from "@/app/actions/event";
 
 async function handleWalletTopup(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
@@ -62,11 +63,23 @@ async function flagPaymentDisputeForReview(charge: Stripe.Charge, reason: string
   );
 }
 
+async function handleEventPayment(session: Stripe.Checkout.Session) {
+  const eventId = session.metadata?.eventId;
+  const userId = session.metadata?.userId;
+  const remainderCents = session.amount_total;
+  const walletCreditCents = Number(session.metadata?.walletCreditCents ?? "0");
+  if (!eventId || !userId || !remainderCents) return;
+
+  await completeEventStripePayment(eventId, userId, remainderCents, walletCreditCents, session.id);
+}
+
 async function handlePlatformEvent(event: Stripe.Event) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     if (session.metadata?.type === "wallet_topup") {
       await handleWalletTopup(session);
+    } else if (session.metadata?.type === "event_payment") {
+      await handleEventPayment(session);
     }
     return;
   }

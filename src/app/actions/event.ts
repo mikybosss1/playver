@@ -8,6 +8,7 @@ import { pool, withTransaction } from "@/lib/db";
 import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail, sendPaymentReceiptEmail, sendEventCancelledEmail, sendEventPostponedEmail } from "@/lib/emails";
 import { resend, FROM, layout, ctaButton, BASE_URL } from "@/lib/emails/_shared";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
+import { getActiveOrganization } from "./organization";
 
 let eventParticipantsTablePromise: Promise<void> | null = null;
 
@@ -113,6 +114,7 @@ type EventRow = {
   rules: string | null;
   organizerId: string;
   organizerName: string;
+  organizationId: string | null;
   customFormEnabled: boolean;
   price: number;
   status: "active" | "cancelled";
@@ -150,10 +152,14 @@ function serializeEvent(row: EventRow) {
 }
 
 export type EventItem = ReturnType<typeof serializeEvent>;
+// Public-facing shape only — deliberately excludes email. This is rendered on
+// the public event page, which any visitor (including logged-out ones) can
+// load, so no contact info belongs here. Organizers get full contact details
+// through getEventRegistrants in organizer-registrations.ts instead, which is
+// permission-gated.
 export type EventParticipant = {
   id: string;
   name: string;
-  email: string;
   image: string | null;
   joinedAt: string;
 };
@@ -192,20 +198,27 @@ export async function createEvent(data: {
   const galleryUrls = galleryItems.map(i => i.url);
   const agendaItems = data.agendaItems ?? [];
 
+  // Attaches the event to whichever organization the creator currently has
+  // active, if any, so it shows up in that org's Registrations tab. Events
+  // created by a user with no organization (or before organizations existed)
+  // simply keep organizationId null — organizerId (the user) still owns them.
+  const activeOrg = await getActiveOrganization();
+
   const id = crypto.randomUUID();
   await pool.query(
     `INSERT INTO "event" (
        id, title, sport, "eventType", location,
        "startDateTime", "endDateTime", "coverImageUrl", "galleryUrls", "galleryItems",
        "registrationMode", capacity, "maxPlayersPerTeam",
-       description, rules, "organizerId", "customFormEnabled", price, "agendaItems", "createdAt", "updatedAt"
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb,NOW(),NOW())`,
+       description, rules, "organizerId", "organizationId", "customFormEnabled", price, "agendaItems", "createdAt", "updatedAt"
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20::jsonb,NOW(),NOW())`,
     [
       id, data.title, data.sport, data.eventType, data.location,
       data.startDateTime, data.endDateTime, data.coverImageUrl ?? null,
       galleryUrls, JSON.stringify(galleryItems),
       data.registrationMode, data.capacity ?? null, data.maxPlayersPerTeam ?? null,
       data.description ?? null, data.rules ?? null, session.user.id,
+      activeOrg?.organization.id ?? null,
       data.customFormEnabled ?? false, data.price ?? 0,
       JSON.stringify(agendaItems),
     ]
@@ -240,9 +253,9 @@ export async function getEvents() {
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
      GROUP BY e.id, u.name
      ORDER BY
-       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
-       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
-       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN NOT (e.status = 'active' AND e."endDateTime" >= NOW()) THEN e."startDateTime" END DESC NULLS LAST`
   );
   return result.rows.map(serializeEvent);
 }
@@ -257,9 +270,9 @@ export async function getTournamentEvents() {
      WHERE e."eventType" = 'Tournament'
      GROUP BY e.id, u.name
      ORDER BY
-       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
-       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
-       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN NOT (e.status = 'active' AND e."endDateTime" >= NOW()) THEN e."startDateTime" END DESC NULLS LAST`
   );
   return result.rows.map(serializeEvent);
 }
@@ -276,9 +289,9 @@ export async function getMyTournaments() {
      WHERE e."organizerId" = $1 AND e."eventType" = 'Tournament'
      GROUP BY e.id, u.name
      ORDER BY
-       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
-       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
-       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN NOT (e.status = 'active' AND e."endDateTime" >= NOW()) THEN e."startDateTime" END DESC NULLS LAST`,
     [session.user.id]
   );
   return result.rows.map(serializeEvent);
@@ -304,9 +317,9 @@ export async function getJoinedTournaments() {
      WHERE e."organizerId" <> $1 AND e."eventType" = 'Tournament'
      GROUP BY e.id, u.name
      ORDER BY
-       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
-       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
-       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN NOT (e.status = 'active' AND e."endDateTime" >= NOW()) THEN e."startDateTime" END DESC NULLS LAST`,
     [session.user.id]
   );
   return result.rows.map(serializeEvent);
@@ -347,9 +360,9 @@ export async function getMyEvents() {
      WHERE e."organizerId" = $1
      GROUP BY e.id, u.name
      ORDER BY
-       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
-       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
-       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN NOT (e.status = 'active' AND e."endDateTime" >= NOW()) THEN e."startDateTime" END DESC NULLS LAST`,
     [session.user.id]
   );
   return result.rows.map(serializeEvent);
@@ -377,9 +390,9 @@ export async function getJoinedEvents() {
                     WHERE tt."tournamentId" = e.id AND ttm."userId" = $1)
        )
      ORDER BY
-       CASE WHEN e."endDateTime" < NOW() THEN 1 ELSE 0 END ASC,
-       CASE WHEN e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
-       CASE WHEN e."endDateTime" < NOW() THEN e."startDateTime" END DESC NULLS LAST`,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN NOT (e.status = 'active' AND e."endDateTime" >= NOW()) THEN e."startDateTime" END DESC NULLS LAST`,
     [session.user.id]
   );
   return result.rows.map(serializeEvent);
@@ -401,7 +414,7 @@ export async function getEventParticipationMap(eventIds: string[]): Promise<Set<
 export async function getEventParticipants(eventId: string): Promise<EventParticipant[]> {
   await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT u.id, u.name, u.email, u.image, ep."joinedAt"
+    `SELECT u.id, u.name, u.image, ep."joinedAt"
      FROM "event_participant" ep
      JOIN "user" u ON u.id = ep."userId"
      WHERE ep."eventId" = $1
@@ -681,6 +694,133 @@ export async function payForEventWithWallet(eventId: string): Promise<{ error?: 
   }
 }
 
+// Called from the Stripe webhook once a direct-checkout event payment
+// (method 'stripe_direct') has actually been captured. remainderCents is what
+// Stripe actually charged the card; walletCreditCents is the wallet-credit
+// portion computed (optimistically, against the payer's balance at checkout
+// time) in /api/stripe/event-checkout — DoorDash-style "apply my balance,
+// charge the rest to my card". The payer's wallet is only debited now, at
+// completion, not at checkout time, so an abandoned checkout never leaves
+// anything reserved/stuck. The organizer's wallet is credited the full price
+// exactly as if it were a wallet transfer, so refunds can still auto-reverse
+// through the wallet ledger (see runEventRefundSweep) instead of requiring a
+// real Stripe refund.
+export async function completeEventStripePayment(
+  eventId: string,
+  payerId: string,
+  remainderCents: number,
+  walletCreditCents: number,
+  stripeSessionId: string
+): Promise<void> {
+  await ensureEventParticipantsTable();
+
+  const eventRes = await pool.query(
+    `SELECT id, title, sport, location, "organizerId", capacity, status, "endDateTime", "startDateTime" FROM "event" WHERE id = $1`,
+    [eventId]
+  );
+  const event = eventRes.rows[0];
+  if (!event) return;
+  const organizerId = event.organizerId as string;
+  const priceCents = remainderCents + walletCreditCents;
+  // The card was already charged by the time this webhook fires — Stripe
+  // Checkout sessions can sit open for a while, so the event may have been
+  // cancelled or ended out from under the payer in the meantime. The money
+  // still has to land somewhere accounted-for (the organizer's wallet, same
+  // as any other event payment), but runEventRefundSweep already ran (or
+  // never will, since the event already ended) and won't pick this row up —
+  // so flag it for manual review instead of leaving it silently unrefundable.
+  const eventInvalid = event.status === "cancelled" || new Date(event.endDateTime) < new Date();
+
+  let alreadyProcessed = false;
+  let alreadyJoined = false;
+  let creditShortfallCents = 0;
+  await withTransaction(async (client) => {
+    // Idempotency gate: a Stripe webhook can be delivered more than once for
+    // the same checkout session, and must never double-credit the organizer.
+    const paymentInsert = await client.query(
+      `INSERT INTO "event_payment" (id, "eventId", "userId", "stripeSessionId", amount, currency, status, method)
+       VALUES ($1, $2, $3, $4, $5, 'cad', 'completed', 'stripe_direct')
+       ON CONFLICT ("stripeSessionId") DO NOTHING RETURNING id`,
+      [crypto.randomUUID(), eventId, payerId, stripeSessionId, priceCents]
+    );
+    if (paymentInsert.rowCount === 0) {
+      alreadyProcessed = true;
+      return;
+    }
+
+    const participantInsert = await client.query(
+      `INSERT INTO "event_participant" (id, "eventId", "userId") VALUES ($1, $2, $3)
+       ON CONFLICT ("eventId", "userId") DO NOTHING RETURNING id`,
+      [crypto.randomUUID(), eventId, payerId]
+    );
+    alreadyJoined = participantInsert.rowCount === 0;
+
+    // Best-effort: apply the wallet credit that was computed at checkout
+    // time. The only way this can fail is if the payer spent that same
+    // balance elsewhere in the (usually short) window between opening
+    // Stripe Checkout and completing payment — rare, since nothing is
+    // reserved up front. If it does, we don't block the registration (the
+    // card was already charged); we just credit the organizer less than the
+    // full price and flag the gap below instead of eating the loss silently.
+    let creditApplied = 0;
+    if (walletCreditCents > 0) {
+      const debit = await client.query(
+        `UPDATE "user" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" >= $1 RETURNING "walletBalance"`,
+        [walletCreditCents, payerId]
+      );
+      if (debit.rowCount && debit.rowCount > 0) {
+        creditApplied = walletCreditCents;
+        // stripeSessionId is left null here: wallet_transaction has a table-wide
+        // UNIQUE index on that column (not scoped per user), and the organizer's
+        // credit row below already carries it — idempotency for the whole
+        // operation is gated by event_payment's own unique stripeSessionId
+        // constraint further up, so this row doesn't need to carry it too.
+        await client.query(
+          `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "eventId")
+           VALUES ($1, $2, 'event_payment_sent', $3, $4, $5)`,
+          [crypto.randomUUID(), payerId, -walletCreditCents, debit.rows[0].walletBalance, eventId]
+        );
+      } else {
+        creditShortfallCents = walletCreditCents;
+      }
+    }
+
+    const organizerCreditCents = remainderCents + creditApplied;
+    const organizerBalanceRes = await client.query(
+      `UPDATE "user" SET "walletBalance" = "walletBalance" + $1 WHERE id = $2 RETURNING "walletBalance"`,
+      [organizerCreditCents, organizerId]
+    );
+    await client.query(
+      `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "eventId", "stripeSessionId")
+       VALUES ($1, $2, 'event_payment_received', $3, $4, $5, $6)`,
+      [crypto.randomUUID(), organizerId, organizerCreditCents, organizerBalanceRes.rows[0].walletBalance, eventId, stripeSessionId]
+    );
+  });
+
+  if (alreadyProcessed) return;
+
+  if (eventInvalid || creditShortfallCents > 0) {
+    const payerRow = await pool.query(`SELECT name FROM "user" WHERE id = $1`, [payerId]);
+    const reasons: string[] = [];
+    if (event.status === "cancelled") reasons.push("paid via Stripe after the event was cancelled");
+    else if (eventInvalid) reasons.push("paid via Stripe after the event had already ended");
+    if (creditShortfallCents > 0) {
+      reasons.push(
+        `wallet credit of $${(creditShortfallCents / 100).toFixed(2)} could not be applied (balance changed before checkout completed) — organizer was credited $${(creditShortfallCents / 100).toFixed(2)} short`
+      );
+    }
+    notifyAdminsOfRefundIssues(event.title, eventId, [
+      { payerName: payerRow.rows[0]?.name ?? null, amountCents: priceCents, reason: reasons.join("; ") + " — needs manual review" },
+    ]).catch(() => {});
+  } else if (!alreadyJoined) {
+    firePaymentEmails(payerId, eventId, event, priceCents).catch(() => {});
+  }
+
+  revalidatePath(`/events/${eventId}`);
+  revalidatePath("/events");
+  revalidatePath("/dashboard");
+}
+
 export async function leaveEvent(eventId: string): Promise<{ error?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -926,7 +1066,7 @@ export async function runEventRefundSweep(
       `SELECT ep.id, ep."userId", ep.amount, u.name as "payerName"
        FROM "event_payment" ep
        JOIN "user" u ON u.id = ep."userId"
-       WHERE ep."eventId" = $1 AND ep.status = 'completed' AND ep.method = 'wallet' AND ep."refundedAt" IS NULL
+       WHERE ep."eventId" = $1 AND ep.status = 'completed' AND ep.method IN ('wallet', 'stripe_direct') AND ep."refundedAt" IS NULL
        ORDER BY ep."createdAt" ASC`,
       [eventId]
     );

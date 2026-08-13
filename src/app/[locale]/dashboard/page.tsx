@@ -28,9 +28,9 @@ export default async function DashboardPage() {
   const allEvents = [...myEvents, ...joinedEvents];
   const now = new Date();
   const upcomingEvents = allEvents
-    .filter((event) => new Date(event.startDateTime) >= now)
+    .filter((event) => event.status === "active" && new Date(event.startDateTime) >= now)
     .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
-  const gamesPlayed = allEvents.filter((event) => new Date(event.endDateTime) < now).length;
+  const gamesPlayed = allEvents.filter((event) => event.status === "active" && new Date(event.endDateTime) < now).length;
 
   const stats = [
     { label: t("statUpcoming"), value: String(upcomingEvents.length), icon: "📅" },

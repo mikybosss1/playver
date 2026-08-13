@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import CreateEventButton from "@/components/CreateEventButton";
-import EventCard from "@/components/EventCard";
+import CreateEventButton from "@/components/events/CreateEventButton";
+import EventCard from "@/components/events/EventCard";
 import { getMyTournaments, getJoinedTournaments } from "@/app/actions/event";
 
 export default async function DashboardTournamentsPage() {

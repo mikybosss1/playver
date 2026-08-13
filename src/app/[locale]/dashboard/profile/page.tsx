@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { getProfileData } from "@/app/actions/athlete";
-import ProfileEditor from "@/components/ProfileEditor";
+import ProfileEditor from "@/components/dashboard/ProfileEditor";
 
 export default async function DashboardProfilePage() {
   const [t, profile] = await Promise.all([

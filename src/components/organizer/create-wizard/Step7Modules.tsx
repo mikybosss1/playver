@@ -1,0 +1,75 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { ORGANIZATION_MODULES } from "@/lib/organization-modules";
+import type { StepProps } from "./types";
+
+export default function Step7Modules({ state, update }: StepProps) {
+  const t = useTranslations("Organizer");
+
+  function toggle(key: string, alwaysOn?: boolean) {
+    if (alwaysOn) return;
+    update({
+      enabledModules: state.enabledModules.includes(key)
+        ? state.enabledModules.filter((m) => m !== key)
+        : [...state.enabledModules, key],
+    });
+  }
+
+  return (
+    <div>
+      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+        {t("wizardStepLabel", { current: 7, total: 10 })}
+      </p>
+      <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>
+        {t("wizardModulesTitle")}
+      </h2>
+      <p className="text-sm text-zinc-500 mb-8 max-w-md">{t("wizardModulesSubtitle")}</p>
+
+      <div className="flex flex-col gap-3 max-w-xl">
+        {ORGANIZATION_MODULES.map(({ key, alwaysOn, recommended }) => {
+          const enabled = alwaysOn || state.enabledModules.includes(key);
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggle(key, alwaysOn)}
+              disabled={alwaysOn}
+              className={`flex items-center justify-between text-left p-4 rounded-xl border-2 transition-colors ${
+                enabled ? "border-emerald-400 bg-emerald-50" : "border-zinc-200 bg-white hover:border-zinc-300"
+              } ${alwaysOn ? "cursor-default" : ""}`}
+            >
+              <span className="flex items-center gap-3">
+                <span
+                  className={`size-5 rounded flex items-center justify-center shrink-0 ${
+                    enabled ? "bg-emerald-500" : "bg-white border border-zinc-300"
+                  }`}
+                >
+                  {enabled && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </span>
+                <span>
+                  <span className="block text-sm font-bold text-zinc-900">{t(`module_${key}Label`)}</span>
+                  <span className="block text-xs text-zinc-500 mt-0.5">{t(`module_${key}Desc`)}</span>
+                </span>
+              </span>
+              {alwaysOn && (
+                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold shrink-0">
+                  {t("wizardAlwaysOn")}
+                </span>
+              )}
+              {!alwaysOn && recommended && (
+                <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold shrink-0">
+                  {t("wizardRecommended")}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

@@ -69,6 +69,7 @@ export type AthleteEvent = {
   endDateTime: string;
   coverImageUrl: string | null;
   role: "organizer" | "participant";
+  status: "active" | "cancelled";
 };
 
 export type AthleteProfile = {
@@ -99,7 +100,7 @@ export async function getAthleteProfile(userId: string): Promise<AthleteProfile 
     ),
     pool.query(
       `SELECT e.id, e.title, e.sport, e."eventType", e.location,
-              e."startDateTime", e."endDateTime", e."coverImageUrl",
+              e."startDateTime", e."endDateTime", e."coverImageUrl", e.status,
               CASE WHEN e."organizerId" = $1 THEN 'organizer' ELSE 'participant' END AS role
        FROM "event" e
        WHERE e."organizerId" = $1
@@ -137,6 +138,7 @@ export async function getAthleteProfile(userId: string): Promise<AthleteProfile 
       endDateTime: new Date(r.endDateTime).toISOString(),
       coverImageUrl: r.coverImageUrl,
       role: r.role as "organizer" | "participant",
+      status: r.status,
     })
   );
 

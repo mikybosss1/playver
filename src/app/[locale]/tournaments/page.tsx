@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import DiscoverSearch from "@/components/DiscoverSearch";
-import CreateEventButton from "@/components/CreateEventButton";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import DiscoverSearch from "@/components/events/DiscoverSearch";
+import CreateEventButton from "@/components/events/CreateEventButton";
 import { auth } from "@/lib/auth";
 import { getEventParticipationMap, getTournamentEvents } from "@/app/actions/event";
 

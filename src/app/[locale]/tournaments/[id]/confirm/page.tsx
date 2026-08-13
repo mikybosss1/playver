@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { Link } from "@/i18n/routing";
-import TournamentConfirmButtons from "@/components/TournamentConfirmButtons";
+import TournamentConfirmButtons from "@/components/tournaments/TournamentConfirmButtons";
 
 export default async function TournamentConfirmPage({
   params,

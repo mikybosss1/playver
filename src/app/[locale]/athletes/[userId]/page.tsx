@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { Link } from "@/i18n/routing";
 import { getAthleteProfile } from "@/app/actions/athlete";
-import AthleteGameHistory from "@/components/AthleteGameHistory";
-import MobileSectionNav from "@/components/MobileSectionNav";
+import AthleteGameHistory from "@/components/athletes/AthleteGameHistory";
+import MobileSectionNav from "@/components/layout/MobileSectionNav";
 
 const NAV_ICON_PROPS = {
   width: 20,
@@ -91,8 +91,8 @@ export default async function AthleteProfilePage({
 
   const { user, teams, events, sports, media, games } = profile;
   const now = new Date();
-  const upcomingEvents = events.filter((e) => new Date(e.startDateTime) >= now);
-  const pastEvents = events.filter((e) => new Date(e.startDateTime) < now);
+  const upcomingEvents = events.filter((e) => e.status === "active" && new Date(e.startDateTime) >= now);
+  const pastEvents = events.filter((e) => e.status !== "active" || new Date(e.startDateTime) < now);
 
   return (
     <>
