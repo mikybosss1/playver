@@ -17,7 +17,7 @@ class InsufficientFundsError extends Error {}
 // from under a refund that might still need to happen. Computed live from the
 // payment tables (not a stored/cached value) so it automatically tracks
 // postponed dates and clears once refunds settle.
-async function getHeldBalance(organizerId: string): Promise<number> {
+export async function getHeldBalance(organizerId: string): Promise<number> {
   const [eventHeld, teamHeld] = await Promise.all([
     pool.query(
       `SELECT COALESCE(SUM(ep.amount), 0) as held FROM "event_payment" ep
@@ -36,6 +36,20 @@ async function getHeldBalance(organizerId: string): Promise<number> {
     ),
   ]);
   return Number(eventHeld.rows[0].held) + Number(teamHeld.rows[0].held);
+}
+
+// Balance minus this same user's held-as-organizer amount — deliberately the
+// same "available" figure used for withdrawals, so funds a refund guarantee
+// might need can't also be spent as wallet credit toward a *different*
+// event's price. Used both to display a discounted price and, authoritatively,
+// to compute the credit at checkout time in /api/stripe/event-checkout.
+export async function getAvailableWalletBalance(userId: string): Promise<number> {
+  const [userRow, held] = await Promise.all([
+    pool.query(`SELECT "walletBalance" FROM "user" WHERE id = $1`, [userId]),
+    getHeldBalance(userId),
+  ]);
+  const balance = Number(userRow.rows[0]?.walletBalance ?? 0);
+  return Math.max(0, balance - held);
 }
 
 export type WalletTransaction = {

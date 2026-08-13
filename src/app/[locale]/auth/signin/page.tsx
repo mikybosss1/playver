@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import SignInForm from "@/components/SignInForm";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import SignInForm from "@/components/auth/SignInForm";
 
 export default async function SignInPage({
   searchParams,

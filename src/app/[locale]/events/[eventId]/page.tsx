@@ -2,13 +2,13 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import EventJoinButton from "@/components/EventJoinButton";
-import EventDetailsTabs from "@/components/EventDetailsTabs";
-import AdminDeleteEventButton from "@/components/AdminDeleteEventButton";
-import EventCancelPostponeButton from "@/components/EventCancelPostponeButton";
-import AdminAddParticipant from "@/components/AdminAddParticipant";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import EventJoinButton from "@/components/events/EventJoinButton";
+import EventDetailsTabs from "@/components/events/EventDetailsTabs";
+import AdminDeleteEventButton from "@/components/events/AdminDeleteEventButton";
+import EventCancelPostponeButton from "@/components/events/EventCancelPostponeButton";
+import AdminAddParticipant from "@/components/events/AdminAddParticipant";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getEventById, getEventParticipants, getEventParticipationMap, getEventFormFields } from "@/app/actions/event";
@@ -16,10 +16,11 @@ import { getTournamentTeams, getMyTournamentTeam, getPendingJoinRequests, getMyT
 import { getGamesForEvent } from "@/app/actions/game";
 import { getMiniEventsForEvent, getTournamentPlayers } from "@/app/actions/miniEvent";
 import { getUserRole } from "@/app/actions/admin";
+import { getAvailableWalletBalance } from "@/app/actions/wallet";
 import { formatPrice } from "@/lib/stripe";
-import TournamentRegisterButton from "@/components/TournamentRegisterButton";
-import { TournamentCaptainPanel, TournamentMemberPanel } from "@/components/TournamentCaptainPanel";
-import JoinTeamTabButton from "@/components/JoinTeamTabButton";
+import TournamentRegisterButton from "@/components/tournaments/TournamentRegisterButton";
+import { TournamentCaptainPanel, TournamentMemberPanel } from "@/components/tournaments/TournamentCaptainPanel";
+import JoinTeamTabButton from "@/components/tournaments/JoinTeamTabButton";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
@@ -57,11 +58,12 @@ export default async function EventDetailsPage({
 
   const isTournament = event.eventType === "Tournament";
 
-  const [joinedSet, participants, formFields, userRole] = await Promise.all([
+  const [joinedSet, participants, formFields, userRole, availableWalletCents] = await Promise.all([
     session && !isTournament ? getEventParticipationMap([event.id]) : Promise.resolve(new Set<string>()),
     getEventParticipants(event.id),
     event.customFormEnabled ? getEventFormFields(event.id) : Promise.resolve([]),
     session ? getUserRole(session.user.id) : Promise.resolve("player" as const),
+    session && !isTournament && event.price > 0 ? getAvailableWalletBalance(session.user.id) : Promise.resolve(0),
   ]);
 
   const [teams, myTeam, myTeamOptions, games, miniEvents, tournamentPlayers] = isTournament
@@ -349,6 +351,7 @@ export default async function EventDetailsPage({
                         joinLabel={t("join")}
                         leaveLabel={t("leave")}
                         price={event.price}
+                        availableWalletCents={availableWalletCents}
                         formFields={formFields}
                         isEnded={isEnded || event.status === "cancelled"}
                       />

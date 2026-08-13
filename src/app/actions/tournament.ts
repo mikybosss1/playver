@@ -42,6 +42,16 @@ export type TournamentTeam = {
   linkedTeamId: string | null;
 };
 
+// Public-facing shapes — deliberately exclude email. getTournamentTeams feeds
+// the public event page (any visitor, logged in or not), so no contact info
+// belongs in its result. getMyTournamentTeam / getTournamentTeamByInviteCode
+// are self-scoped (caller must be the captain or a member) and keep using the
+// full TournamentTeam/TournamentTeamMember types with email intact.
+export type PublicTournamentTeamMember = Omit<TournamentTeamMember, "email">;
+export type PublicTournamentTeam = Omit<TournamentTeam, "members"> & {
+  members: PublicTournamentTeamMember[];
+};
+
 export type TournamentJoinRequest = {
   id: string;
   teamId: string;
@@ -118,7 +128,7 @@ async function fetchTeamWithMembers(teamId: string): Promise<TournamentTeam | nu
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
-export async function getTournamentTeams(tournamentId: string): Promise<TournamentTeam[]> {
+export async function getTournamentTeams(tournamentId: string): Promise<PublicTournamentTeam[]> {
   await ensureTournamentTables();
 
   const teamsRes = await pool.query(
@@ -131,7 +141,19 @@ export async function getTournamentTeams(tournamentId: string): Promise<Tourname
   const teams = await Promise.all(
     teamsRes.rows.map((r: { id: string }) => fetchTeamWithMembers(r.id))
   );
-  return teams.filter((t): t is TournamentTeam => t !== null);
+  return teams
+    .filter((t): t is TournamentTeam => t !== null)
+    .map(({ members, ...team }) => ({
+      ...team,
+      members: members.map((m) => ({
+        id: m.id,
+        userId: m.userId,
+        name: m.name,
+        image: m.image,
+        joinedAt: m.joinedAt,
+        confirmationStatus: m.confirmationStatus,
+      })),
+    }));
 }
 
 export async function getMyTournamentTeam(tournamentId: string): Promise<TournamentTeam | null> {
@@ -199,51 +221,51 @@ export async function getPendingJoinRequests(teamId: string): Promise<Tournament
   }));
 }
 
-export type LinkedTeamJoinRequest = {
-  id: string;
-  tournamentTeamId: string;
-  userId: string;
-  userName: string;
-  userImage: string | null;
-  status: "pending";
-  createdAt: string;
+export type CaptainedTournamentRegistration = {
+  tournamentId: string;
   tournamentTitle: string;
+  price: number;
+  team: TournamentTeam;
+  pendingRequests: TournamentJoinRequest[];
 };
 
-// Pending join requests across all of this (regular) team's tournament registrations
-// that the current session user captains — so requests can be reviewed from the
-// team's own page, not just from inside each tournament.
-export async function getPendingJoinRequestsForLinkedTeam(linkedTeamId: string): Promise<LinkedTeamJoinRequest[]> {
+// Every tournament registration of this (regular, persistent) team that the
+// current session user captains — lets the full captain toolkit (recruitment
+// toggle, invite link, join requests, disband) be managed from the team's own
+// page, not just from inside each tournament's event page.
+export async function getCaptainedTournamentRegistrationsForLinkedTeam(
+  linkedTeamId: string
+): Promise<CaptainedTournamentRegistration[]> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return [];
   await ensureTournamentTables();
 
   const res = await pool.query(
-    `SELECT tjr.id, tjr."teamId", tjr."userId", tjr.status, tjr."createdAt",
-            u.name as "userName", u.image as "userImage",
-            e.title as "tournamentTitle"
-     FROM "tournament_join_request" tjr
-     JOIN "user" u ON u.id = tjr."userId"
-     JOIN "tournament_team" tt ON tt.id = tjr."teamId"
+    `SELECT tt.id AS "teamId", tt."tournamentId", e.title AS "tournamentTitle", e.price
+     FROM "tournament_team" tt
      JOIN "event" e ON e.id = tt."tournamentId"
-     WHERE tt."linkedTeamId" = $1 AND tt."captainId" = $2 AND tjr.status = 'pending'
-     ORDER BY tjr."createdAt" ASC`,
+     WHERE tt."linkedTeamId" = $1 AND tt."captainId" = $2
+     ORDER BY tt."createdAt" ASC`,
     [linkedTeamId, session.user.id]
   );
 
-  return res.rows.map((r: {
-    id: string; teamId: string; userId: string; userName: string;
-    userImage: string | null; status: string; createdAt: Date; tournamentTitle: string;
-  }) => ({
-    id: r.id,
-    tournamentTeamId: r.teamId,
-    userId: r.userId,
-    userName: r.userName,
-    userImage: r.userImage,
-    status: r.status as "pending",
-    createdAt: new Date(r.createdAt).toISOString(),
-    tournamentTitle: r.tournamentTitle,
-  }));
+  const registrations = await Promise.all(
+    res.rows.map(async (row: { teamId: string; tournamentId: string; tournamentTitle: string; price: number }) => {
+      const [team, pendingRequests] = await Promise.all([
+        fetchTeamWithMembers(row.teamId),
+        getPendingJoinRequests(row.teamId),
+      ]);
+      if (!team) return null;
+      return {
+        tournamentId: row.tournamentId,
+        tournamentTitle: row.tournamentTitle,
+        price: Number(row.price ?? 0),
+        team,
+        pendingRequests,
+      };
+    })
+  );
+  return registrations.filter((r): r is CaptainedTournamentRegistration => r !== null);
 }
 
 export async function getUserJoinRequestForTeam(teamId: string): Promise<TournamentJoinRequest | null> {

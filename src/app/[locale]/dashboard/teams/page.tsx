@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
-import CreateTeamButton from "@/components/CreateTeamButton";
+import CreateTeamButton from "@/components/teams/CreateTeamButton";
 import { getMyTeams, getJoinedTeams } from "@/app/actions/team";
 import { Link } from "@/i18n/routing";
 

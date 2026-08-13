@@ -1,10 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import DiscoverSearch from "@/components/DiscoverSearch";
-import SuccessToast from "@/components/SuccessToast";
-import CreateEventButton from "@/components/CreateEventButton";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import DiscoverSearch from "@/components/events/DiscoverSearch";
+import SuccessToast from "@/components/ui/SuccessToast";
+import CreateEventButton from "@/components/events/CreateEventButton";
 import { auth } from "@/lib/auth";
 import { getEventParticipationMap, getEvents } from "@/app/actions/event";
 

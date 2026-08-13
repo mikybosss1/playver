@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import TeamsGrid from "@/components/TeamsGrid";
-import CreateTeamButton from "@/components/CreateTeamButton";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import TeamsGrid from "@/components/teams/TeamsGrid";
+import CreateTeamButton from "@/components/teams/CreateTeamButton";
 import { getTeams, getMembershipMap } from "@/app/actions/team";
 import { auth } from "@/lib/auth";
 

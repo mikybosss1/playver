@@ -1,11 +1,11 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getTournamentTeamByInviteCode } from "@/app/actions/tournament";
-import InviteAcceptButtons from "@/components/TournamentInviteAcceptButtons";
+import InviteAcceptButtons from "@/components/tournaments/TournamentInviteAcceptButtons";
 
 export default async function TournamentTeamJoinPage({
   params,

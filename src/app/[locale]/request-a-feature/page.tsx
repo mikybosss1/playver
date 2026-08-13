@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 export default async function RequestAFeaturePage() {
   const t = await getTranslations("RequestFeature");

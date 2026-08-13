@@ -1,9 +1,9 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import CreateEventForm from "@/components/CreateEventForm";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import CreateEventForm from "@/components/events/CreateEventForm";
 import { auth } from "@/lib/auth";
 import { getEventById, getEventFormFields } from "@/app/actions/event";
 import { getUserRole } from "@/app/actions/admin";

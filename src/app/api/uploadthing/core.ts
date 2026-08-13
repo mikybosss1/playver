@@ -39,6 +39,18 @@ export const ourFileRouter = {
   })
     .middleware(() => ({}))
     .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
+
+  organizationLogo: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    .middleware(() => ({}))
+    .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
+
+  organizationCover: f({ image: { maxFileSize: "16MB", maxFileCount: 1 } })
+    .middleware(() => ({}))
+    .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
+
+  organizationPolicyDocument: f({ pdf: { maxFileSize: "8MB", maxFileCount: 1 } })
+    .middleware(() => ({}))
+    .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

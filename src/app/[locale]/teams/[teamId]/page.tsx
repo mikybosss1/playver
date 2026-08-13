@@ -2,19 +2,18 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import LeaveTeamButton from "@/components/LeaveTeamButton";
-import RemoveTeamMemberButton from "@/components/RemoveTeamMemberButton";
-import { JoinOpenTeamButton } from "@/components/TournamentCaptainPanel";
-import TeamJoinRequests from "@/components/TeamJoinRequests";
-import BackButton from "@/components/BackButton";
-import MobileSectionNav from "@/components/MobileSectionNav";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import LeaveTeamButton from "@/components/teams/LeaveTeamButton";
+import RemoveTeamMemberButton from "@/components/teams/RemoveTeamMemberButton";
+import { JoinOpenTeamButton, TournamentCaptainPanel } from "@/components/tournaments/TournamentCaptainPanel";
+import BackButton from "@/components/layout/BackButton";
+import MobileSectionNav from "@/components/layout/MobileSectionNav";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getMembershipMap, getTeamById, getTeamMembers } from "@/app/actions/team";
 import { getTeamEvents } from "@/app/actions/event";
-import { getJoinableTournamentRegistrations, getPendingJoinRequestsForLinkedTeam } from "@/app/actions/tournament";
+import { getJoinableTournamentRegistrations, getCaptainedTournamentRegistrationsForLinkedTeam } from "@/app/actions/tournament";
 
 const NAV_ICON_PROPS = {
   width: 20,
@@ -97,12 +96,12 @@ export default async function TeamDetailsPage({
 
   const isCaptain = session?.user?.id === team.captainId;
 
-  const [members, membershipSet, teamEvents, joinableRegistrations, pendingJoinRequests] = await Promise.all([
+  const [members, membershipSet, teamEvents, joinableRegistrations, captainedRegistrations] = await Promise.all([
     getTeamMembers(team.id),
     session ? getMembershipMap([team.id]) : Promise.resolve(new Set<string>()),
     getTeamEvents(team.id),
     session && !isCaptain ? getJoinableTournamentRegistrations(team.id) : Promise.resolve([]),
-    isCaptain ? getPendingJoinRequestsForLinkedTeam(team.id) : Promise.resolve([]),
+    isCaptain ? getCaptainedTournamentRegistrationsForLinkedTeam(team.id) : Promise.resolve([]),
   ]);
 
   // Captain always first
@@ -112,8 +111,8 @@ export default async function TeamDetailsPage({
   ];
 
   const now = new Date();
-  const upcomingEvents = teamEvents.filter((e) => new Date(e.startDateTime) >= now);
-  const pastEvents = teamEvents.filter((e) => new Date(e.startDateTime) < now);
+  const upcomingEvents = teamEvents.filter((e) => e.status === "active" && new Date(e.startDateTime) >= now);
+  const pastEvents = teamEvents.filter((e) => e.status !== "active" || new Date(e.startDateTime) < now);
 
   return (
     <>
@@ -310,12 +309,32 @@ export default async function TeamDetailsPage({
                 </p>
                 <div className="mt-6 flex flex-col gap-3">
                   {isCaptain ? (
-                    <>
+                    captainedRegistrations.length > 0 ? (
+                      <div className="flex flex-col gap-6">
+                        {captainedRegistrations.map((reg) => (
+                          <div key={reg.tournamentId}>
+                            {captainedRegistrations.length > 1 && (
+                              <Link
+                                href={`/events/${reg.tournamentId}`}
+                                className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400 hover:text-[#e21d12] transition-colors"
+                              >
+                                {t("forTournament", { title: reg.tournamentTitle })}
+                              </Link>
+                            )}
+                            <TournamentCaptainPanel
+                              team={reg.team}
+                              pendingRequests={reg.pendingRequests}
+                              tournamentId={reg.tournamentId}
+                              price={reg.price}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
                       <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
                         {t("yourTeam")}
                       </span>
-                      <TeamJoinRequests requests={pendingJoinRequests} />
-                    </>
+                    )
                   ) : session && membershipSet.has(team.id) ? (
                     <LeaveTeamButton teamId={team.id} leaveLabel={t("leave")} />
                   ) : null}

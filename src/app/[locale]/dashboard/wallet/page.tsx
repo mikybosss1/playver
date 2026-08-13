@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getWalletOverview } from "@/app/actions/wallet";
-import WalletClient from "@/components/WalletClient";
+import WalletClient from "@/components/dashboard/WalletClient";
 
 export default async function DashboardWalletPage({
   searchParams,

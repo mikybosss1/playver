@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import SignUpForm from "@/components/SignUpForm";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import SignUpForm from "@/components/auth/SignUpForm";
 
 export default async function SignUpPage({
   searchParams,

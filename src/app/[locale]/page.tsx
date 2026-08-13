@@ -1,9 +1,9 @@
 import { headers } from "next/headers";
-import Navbar from "@/components/Navbar";
-import HeroSection from "@/components/HeroSection";
-import HowItWorks from "@/components/HowItWorks";
-import UpcomingEvents from "@/components/UpcomingEvents";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/layout/Navbar";
+import HeroSection from "@/components/home/HeroSection";
+import HowItWorks from "@/components/home/HowItWorks";
+import UpcomingEvents from "@/components/home/UpcomingEvents";
+import Footer from "@/components/layout/Footer";
 import { auth } from "@/lib/auth";
 import { getEvents } from "@/app/actions/event";
 
