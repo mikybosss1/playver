@@ -2,7 +2,6 @@ import { headers } from "next/headers";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import DiscoverSearch from "@/components/events/DiscoverSearch";
-import CreateEventButton from "@/components/events/CreateEventButton";
 import { auth } from "@/lib/auth";
 import { getEventParticipationMap, getTournamentEvents } from "@/app/actions/event";
 
@@ -20,26 +19,19 @@ export default async function TournamentsPage() {
       <Navbar />
       <main className="flex-1 bg-white">
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-16">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <div>
-              <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-4">
-                Compete
-              </p>
-              <h1
-                className="text-4xl sm:text-5xl font-bold text-zinc-900 mb-4"
-                style={{ fontFamily: "var(--font-playfair)" }}
-              >
-                Tournaments
-              </h1>
-              <p className="text-zinc-500 text-lg max-w-2xl">
-                Find competitive brackets, elimination rounds, and championship events near you.
-              </p>
-            </div>
-            {session && (
-              <div className="shrink-0 pt-1">
-                <CreateEventButton label="Create Tournament" />
-              </div>
-            )}
+          <div className="mb-4">
+            <p className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-4">
+              Compete
+            </p>
+            <h1
+              className="text-4xl sm:text-5xl font-bold text-zinc-900 mb-4"
+              style={{ fontFamily: "var(--font-playfair)" }}
+            >
+              Tournaments
+            </h1>
+            <p className="text-zinc-500 text-lg max-w-2xl">
+              Find competitive brackets, elimination rounds, and championship events near you.
+            </p>
           </div>
 
           {events.length === 0 ? (

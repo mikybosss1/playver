@@ -12,6 +12,7 @@ import AdminAddParticipant from "@/components/events/AdminAddParticipant";
 import { Link } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
 import { getEventById, getEventParticipants, getEventParticipationMap, getEventFormFields } from "@/app/actions/event";
+import { canManageOrgEvent } from "@/app/actions/organizer-events";
 import { getTournamentTeams, getMyTournamentTeam, getPendingJoinRequests, getMyTeamOptions } from "@/app/actions/tournament";
 import { getGamesForEvent } from "@/app/actions/game";
 import { getMiniEventsForEvent, getTournamentPlayers } from "@/app/actions/miniEvent";
@@ -84,6 +85,8 @@ export default async function EventDetailsPage({
 
   const isSuperAdmin = userRole === "super_admin";
   const isOrganizer = session?.user?.id === event.organizerId;
+  const canManageInOrg =
+    event.organizationId && session ? await canManageOrgEvent(event.organizationId, session.user.id) : false;
   const isEnded = new Date(event.endDateTime) < new Date();
   const capacity = event.capacity ?? 0;
   const progress = capacity > 0 ? Math.min((event.participantCount / capacity) * 100, 100) : 0;
@@ -228,31 +231,49 @@ export default async function EventDetailsPage({
                         {t("organizedBy")}: <span className="font-semibold text-zinc-700">{event.organizerName}</span>
                       </p>
                       <div className="mt-6 flex flex-col gap-2">
-                        {(isOrganizer || isSuperAdmin) && (
+                        {event.organizationId === null ? (
+                          (isOrganizer || isSuperAdmin) && (
+                            <>
+                              {isOrganizer ? (
+                                <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
+                                  {t("youreOrganizer")}
+                                </span>
+                              ) : (
+                                <span className="block rounded-lg bg-zinc-100 px-4 py-3 text-center text-sm font-bold text-zinc-500">
+                                  {t("youreSuperAdmin")}
+                                </span>
+                              )}
+                              <Link
+                                href={`/events/${event.id}/edit`}
+                                className="block rounded-lg border border-zinc-200 bg-white px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                              >
+                                {t("editTournament")}
+                              </Link>
+                              {!isEnded && event.status === "active" && (
+                                <EventCancelPostponeButton
+                                  eventId={event.id}
+                                  eventTitle={event.title}
+                                  startDateTime={event.startDateTime}
+                                  endDateTime={event.endDateTime}
+                                  isPaid={event.price > 0}
+                                />
+                              )}
+                            </>
+                          )
+                        ) : (
                           <>
-                            {isOrganizer ? (
+                            {isOrganizer && (
                               <span className="block rounded-lg bg-[#e21d12]/10 px-4 py-3 text-center text-sm font-bold text-[#e21d12]">
                                 {t("youreOrganizer")}
                               </span>
-                            ) : (
-                              <span className="block rounded-lg bg-zinc-100 px-4 py-3 text-center text-sm font-bold text-zinc-500">
-                                {t("youreSuperAdmin")}
-                              </span>
                             )}
-                            <Link
-                              href={`/events/${event.id}/edit`}
-                              className="block rounded-lg border border-zinc-200 bg-white px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
-                            >
-                              {t("editTournament")}
-                            </Link>
-                            {!isEnded && event.status === "active" && (
-                              <EventCancelPostponeButton
-                                eventId={event.id}
-                                eventTitle={event.title}
-                                startDateTime={event.startDateTime}
-                                endDateTime={event.endDateTime}
-                                isPaid={event.price > 0}
-                              />
+                            {(canManageInOrg || isSuperAdmin) && (
+                              <Link
+                                href={`/organizer/events/${event.id}`}
+                                className="block rounded-lg border border-zinc-200 bg-white px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                              >
+                                {t("manageEvent")}
+                              </Link>
                             )}
                           </>
                         )}
@@ -325,24 +346,35 @@ export default async function EventDetailsPage({
                         {t("yourEvent")}
                       </span>
                     )}
-                    {(isOrganizer || isSuperAdmin) && (
-                      <>
+                    {event.organizationId === null ? (
+                      (isOrganizer || isSuperAdmin) && (
+                        <>
+                          <Link
+                            href={`/events/${event.id}/edit`}
+                            className="block rounded-lg border border-zinc-200 px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                          >
+                            {t("editEvent")}
+                          </Link>
+                          {!isEnded && event.status === "active" && (
+                            <EventCancelPostponeButton
+                              eventId={event.id}
+                              eventTitle={event.title}
+                              startDateTime={event.startDateTime}
+                              endDateTime={event.endDateTime}
+                              isPaid={event.price > 0}
+                            />
+                          )}
+                        </>
+                      )
+                    ) : (
+                      (canManageInOrg || isSuperAdmin) && (
                         <Link
-                          href={`/events/${event.id}/edit`}
+                          href={`/organizer/events/${event.id}`}
                           className="block rounded-lg border border-zinc-200 px-4 py-3 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
                         >
-                          {t("editEvent")}
+                          {t("manageEvent")}
                         </Link>
-                        {!isEnded && event.status === "active" && (
-                          <EventCancelPostponeButton
-                            eventId={event.id}
-                            eventTitle={event.title}
-                            startDateTime={event.startDateTime}
-                            endDateTime={event.endDateTime}
-                            isPaid={event.price > 0}
-                          />
-                        )}
-                      </>
+                      )
                     )}
                     {session && (
                       <EventJoinButton

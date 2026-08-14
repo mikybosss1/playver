@@ -8,6 +8,7 @@ const ALL_PERMISSIONS: OrgPermission[] = [
   "MANAGE_PEOPLE",
   "VIEW_SENSITIVE_PARTICIPANT_DATA",
   "MANAGE_PROGRAMS",
+  "MANAGE_EVENTS",
   "MANAGE_REGISTRATIONS",
   "APPROVE_REGISTRATIONS",
   "VIEW_PAYMENTS",
@@ -36,6 +37,7 @@ describe("hasPermission", () => {
       "MANAGE_ADMINISTRATORS",
       "MANAGE_PEOPLE",
       "MANAGE_PROGRAMS",
+      "MANAGE_EVENTS",
       "MANAGE_REGISTRATIONS",
       "APPROVE_REGISTRATIONS",
       "MANAGE_PAYMENTS",
@@ -58,6 +60,14 @@ describe("hasPermission", () => {
     for (const role of ORG_ROLES) {
       const expected = role === "OWNER" || role === "ADMINISTRATOR";
       expect(hasPermission(role, "ISSUE_REFUNDS")).toBe(expected);
+    }
+  });
+
+  it("grants MANAGE_EVENTS to OWNER, ADMINISTRATOR, OPERATIONS_MANAGER, and STAFF only", () => {
+    for (const role of ORG_ROLES) {
+      const expected =
+        role === "OWNER" || role === "ADMINISTRATOR" || role === "OPERATIONS_MANAGER" || role === "STAFF";
+      expect(hasPermission(role, "MANAGE_EVENTS")).toBe(expected);
     }
   });
 

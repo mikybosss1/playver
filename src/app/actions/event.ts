@@ -8,11 +8,13 @@ import { pool, withTransaction } from "@/lib/db";
 import { sendEventJoinedEmail, sendNewParticipantEmail, sendEventFullEmail, sendPaymentReceiptEmail, sendEventCancelledEmail, sendEventPostponedEmail } from "@/lib/emails";
 import { resend, FROM, layout, ctaButton, BASE_URL } from "@/lib/emails/_shared";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
-import { getActiveOrganization } from "./organization";
+import { requireOrganizationPermission } from "./organization";
+import { hasPermission, type OrgRole } from "@/lib/organizer-permissions";
+import { serializeEvent } from "@/lib/serialize-event";
 
 let eventParticipantsTablePromise: Promise<void> | null = null;
 
-async function ensureEventParticipantsTable() {
+export async function ensureEventParticipantsTable() {
   eventParticipantsTablePromise ??= (async () => {
     await pool.query(
       `CREATE TABLE IF NOT EXISTS "event_participant" (
@@ -95,62 +97,6 @@ export type FormResponseInput = {
   value: string;
 };
 
-type EventRow = {
-  id: string;
-  title: string;
-  sport: string;
-  eventType: string;
-  location: string;
-  startDateTime: Date | string;
-  endDateTime: Date | string;
-  coverImageUrl: string | null;
-  galleryUrls: string[] | null;
-  galleryItems: GalleryItem[] | null;
-  agendaItems: AgendaItem[] | null;
-  registrationMode: string;
-  capacity: number | null;
-  maxPlayersPerTeam: number | null;
-  description: string | null;
-  rules: string | null;
-  organizerId: string;
-  organizerName: string;
-  organizationId: string | null;
-  customFormEnabled: boolean;
-  price: number;
-  status: "active" | "cancelled";
-  createdAt: Date | string;
-  updatedAt: Date | string;
-  participantCount: string | number;
-};
-
-function formatLocalTimestamp(value: Date | string) {
-  if (typeof value === "string") {
-    return value.includes(" ") ? value.replace(" ", "T") : value;
-  }
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
-}
-
-function serializeEvent(row: EventRow) {
-  const rawItems: GalleryItem[] = row.galleryItems ?? [];
-  const galleryItems: GalleryItem[] = rawItems.length > 0
-    ? rawItems
-    : (row.galleryUrls ?? []).map(url => ({ url, type: "image" as const }));
-  return {
-    ...row,
-    startDateTime: formatLocalTimestamp(row.startDateTime),
-    endDateTime: formatLocalTimestamp(row.endDateTime),
-    createdAt: new Date(row.createdAt).toISOString(),
-    updatedAt: new Date(row.updatedAt).toISOString(),
-    galleryUrls: row.galleryUrls ?? [],
-    galleryItems,
-    agendaItems: (row.agendaItems ?? []) as AgendaItem[],
-    participantCount: Number(row.participantCount ?? 0),
-    customFormEnabled: row.customFormEnabled ?? false,
-    price: Number(row.price ?? 0),
-  };
-}
-
 export type EventItem = ReturnType<typeof serializeEvent>;
 // Public-facing shape only — deliberately excludes email. This is rendered on
 // the public event page, which any visitor (including logged-out ones) can
@@ -163,6 +109,41 @@ export type EventParticipant = {
   image: string | null;
   joinedAt: string;
 };
+
+// Shared gate for update/cancel/postpone: authorized if you're the event's
+// creator (covers legacy pre-org events, where organizationId is null) OR
+// you hold MANAGE_EVENTS in the event's organization — so an org admin can
+// manage a colleague's event, not just their own.
+async function authorizeEventManagement(
+  eventId: string,
+  userId: string
+): Promise<
+  | { error: "Event not found" | "Forbidden" }
+  | { event: { organizerId: string; organizationId: string | null; eventType: string; title: string; sport: string; location: string; startDateTime: Date | string } }
+> {
+  const [existing, roleRow] = await Promise.all([
+    pool.query(
+      `SELECT "organizerId", "organizationId", "eventType", title, sport, location, "startDateTime" FROM "event" WHERE id = $1`,
+      [eventId]
+    ),
+    pool.query(`SELECT role FROM "user" WHERE id = $1`, [userId]),
+  ]);
+  const row = existing.rows[0];
+  if (!row) return { error: "Event not found" };
+
+  const isSuperAdmin = roleRow.rows[0]?.role === "super_admin";
+  let authorized = row.organizerId === userId || isSuperAdmin;
+  if (!authorized && row.organizationId) {
+    const membership = await pool.query(
+      `SELECT role FROM "organization_membership" WHERE "userId" = $1 AND "organizationId" = $2 AND status = 'active'`,
+      [userId, row.organizationId]
+    );
+    const orgRole = membership.rows[0]?.role as OrgRole | undefined;
+    authorized = orgRole ? hasPermission(orgRole, "MANAGE_EVENTS") : false;
+  }
+
+  return authorized ? { event: row } : { error: "Forbidden" };
+}
 
 export async function createEvent(data: {
   title: string;
@@ -189,20 +170,16 @@ export async function createEvent(data: {
     order: number;
   }>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
+  // Event creation requires an active organization — every event is now
+  // organization-owned. Legacy events with organizationId null predate this
+  // requirement and are left as-is; this path can no longer produce one.
+  const { userId, organization } = await requireOrganizationPermission("MANAGE_EVENTS");
 
   await ensureFormTables();
 
   const galleryItems = data.galleryItems ?? [];
   const galleryUrls = galleryItems.map(i => i.url);
   const agendaItems = data.agendaItems ?? [];
-
-  // Attaches the event to whichever organization the creator currently has
-  // active, if any, so it shows up in that org's Registrations tab. Events
-  // created by a user with no organization (or before organizations existed)
-  // simply keep organizationId null — organizerId (the user) still owns them.
-  const activeOrg = await getActiveOrganization();
 
   const id = crypto.randomUUID();
   await pool.query(
@@ -217,12 +194,14 @@ export async function createEvent(data: {
       data.startDateTime, data.endDateTime, data.coverImageUrl ?? null,
       galleryUrls, JSON.stringify(galleryItems),
       data.registrationMode, data.capacity ?? null, data.maxPlayersPerTeam ?? null,
-      data.description ?? null, data.rules ?? null, session.user.id,
-      activeOrg?.organization.id ?? null,
+      data.description ?? null, data.rules ?? null, userId,
+      organization.id,
       data.customFormEnabled ?? false, data.price ?? 0,
       JSON.stringify(agendaItems),
     ]
   );
+
+  revalidatePath("/organizer/events");
 
   if (data.customFormEnabled && data.formFields?.length) {
     for (const field of data.formFields) {
@@ -277,6 +256,8 @@ export async function getTournamentEvents() {
   return result.rows.map(serializeEvent);
 }
 
+// Legacy-only (organizationId null), same reasoning as getMyLegacyEvents —
+// tournaments belonging to an org show up in /organizer/events instead.
 export async function getMyTournaments() {
   await ensureTournamentTables();
   const session = await auth.api.getSession({ headers: await headers() });
@@ -286,7 +267,7 @@ export async function getMyTournaments() {
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
      LEFT JOIN "tournament_team" tt ON tt."tournamentId" = e.id AND tt.status = 'active'
-     WHERE e."organizerId" = $1 AND e."eventType" = 'Tournament'
+     WHERE e."organizerId" = $1 AND e."eventType" = 'Tournament' AND e."organizationId" IS NULL
      GROUP BY e.id, u.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
@@ -358,6 +339,37 @@ export async function getMyEvents() {
      JOIN "user" u ON e."organizerId" = u.id
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
      WHERE e."organizerId" = $1
+     GROUP BY e.id, u.name
+     ORDER BY
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
+       CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
+       CASE WHEN NOT (e.status = 'active' AND e."endDateTime" >= NOW()) THEN e."startDateTime" END DESC NULLS LAST`,
+    [session.user.id]
+  );
+  return result.rows.map(serializeEvent);
+}
+
+// Legacy (pre-organization) events this user created directly — organizationId
+// is null. New events always require an org (see createEvent), so this can
+// only ever surface pre-existing rows; used solely by the trimmed "My Events"
+// section on /dashboard/events. Deliberately separate from getMyEvents, which
+// the main /dashboard overview still uses to include org-owned events in an
+// organizer's own upcoming-events/games-played stats.
+export async function getMyLegacyEvents() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return [];
+  await ensureEventParticipantsTable();
+
+  const result = await pool.query(
+    `SELECT e.*, u.name as "organizerName",
+       CASE WHEN e."eventType" = 'Tournament'
+         THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
+         ELSE COUNT(ep.id)
+       END as "participantCount"
+     FROM "event" e
+     JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
+     WHERE e."organizerId" = $1 AND e."organizationId" IS NULL
      GROUP BY e.id, u.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
@@ -872,13 +884,8 @@ export async function updateEvent(eventId: string, data: {
 
   await ensureFormTables();
 
-  const [existing, roleRow] = await Promise.all([
-    pool.query(`SELECT "organizerId" FROM "event" WHERE id = $1`, [eventId]),
-    pool.query(`SELECT role FROM "user" WHERE id = $1`, [session.user.id]),
-  ]);
-  if (!existing.rows[0]) throw new Error("Event not found");
-  const isSuperAdmin = roleRow.rows[0]?.role === "super_admin";
-  if (existing.rows[0].organizerId !== session.user.id && !isSuperAdmin) throw new Error("Forbidden");
+  const authResult = await authorizeEventManagement(eventId, session.user.id);
+  if ("error" in authResult) throw new Error(authResult.error);
 
   const galleryItems = data.galleryItems ?? [];
   const galleryUrls = galleryItems.map(i => i.url);
@@ -1114,16 +1121,8 @@ export async function cancelEvent(eventId: string): Promise<{ error?: string }> 
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return { error: "Unauthorized" };
 
-    const [existing, roleRow] = await Promise.all([
-      pool.query(
-        `SELECT "organizerId", "eventType", title, sport, location, "startDateTime" FROM "event" WHERE id = $1`,
-        [eventId]
-      ),
-      pool.query(`SELECT role FROM "user" WHERE id = $1`, [session.user.id]),
-    ]);
-    if (!existing.rows[0]) return { error: "Event not found" };
-    const isSuperAdmin = roleRow.rows[0]?.role === "super_admin";
-    if (existing.rows[0].organizerId !== session.user.id && !isSuperAdmin) return { error: "Forbidden" };
+    const authResult = await authorizeEventManagement(eventId, session.user.id);
+    if ("error" in authResult) return { error: authResult.error };
 
     const flip = await pool.query(
       `UPDATE "event" SET status = 'cancelled', "updatedAt" = NOW() WHERE id = $1 AND status = 'active' RETURNING id`,
@@ -1133,7 +1132,7 @@ export async function cancelEvent(eventId: string): Promise<{ error?: string }> 
 
     const { refunded, pendingReview } = await runEventRefundSweep(eventId);
 
-    const eventRow = existing.rows[0];
+    const eventRow = authResult.event;
     const isTournament = eventRow.eventType === "Tournament";
     const recipients = await getEventSignupRecipients(eventId, isTournament);
 
@@ -1173,21 +1172,13 @@ export async function postponeEvent(
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return { error: "Unauthorized" };
 
-    const [existing, roleRow] = await Promise.all([
-      pool.query(
-        `SELECT "organizerId", "eventType", title, sport, location, "startDateTime" FROM "event" WHERE id = $1`,
-        [eventId]
-      ),
-      pool.query(`SELECT role FROM "user" WHERE id = $1`, [session.user.id]),
-    ]);
-    if (!existing.rows[0]) return { error: "Event not found" };
-    const isSuperAdmin = roleRow.rows[0]?.role === "super_admin";
-    if (existing.rows[0].organizerId !== session.user.id && !isSuperAdmin) return { error: "Forbidden" };
+    const authResult = await authorizeEventManagement(eventId, session.user.id);
+    if ("error" in authResult) return { error: authResult.error };
 
     if (new Date(newEndDateTime) <= new Date(newStartDateTime)) return { error: "End date must be after start date" };
     if (new Date(newStartDateTime) < new Date()) return { error: "New date must be in the future" };
 
-    const eventRow = existing.rows[0];
+    const eventRow = authResult.event;
     const oldStartDateTime = new Date(eventRow.startDateTime).toISOString();
 
     const flip = await pool.query(
