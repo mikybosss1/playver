@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { createConnectOnboardingLink, getWalletOverview } from "@/app/actions/wallet";
+import { createOrganizationConnectOnboardingLink, getOrganizationWalletOverview } from "@/app/actions/organizer-wallet";
 import type { StepProps } from "./types";
 
 export default function Step9Payments({ state, update }: StepProps) {
@@ -11,7 +11,7 @@ export default function Step9Payments({ state, update }: StepProps) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getWalletOverview()
+    getOrganizationWalletOverview()
       .then((overview) => update({ connectAccountId: overview.connectAccountId, connectOnboarded: overview.connectOnboarded }))
       .catch(() => {});
     // Only needs to run once when this step mounts.
@@ -21,7 +21,7 @@ export default function Step9Payments({ state, update }: StepProps) {
   async function handleConnect() {
     setConnecting(true);
     setError("");
-    const result = await createConnectOnboardingLink();
+    const result = await createOrganizationConnectOnboardingLink("/organizer/overview");
     if (result.url) {
       window.location.href = result.url;
       return;
