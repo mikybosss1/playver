@@ -432,6 +432,10 @@
   "CreateEvent": {
     "modalTitle": "Créer un événement",
     "success": "Événement créé avec succès.",
+    "noOrgTitle": "Créez d'abord une organisation",
+    "noOrgDescription": "Vous devez avoir une organisation avant de pouvoir créer des événements. Configurez-en une maintenant pour continuer — vous serez amené directement au formulaire d'événement ensuite.",
+    "noOrgCreateButton": "Créer une organisation",
+    "noOrgCancelButton": "Annuler",
     "sectionBasic": "Détails de l'événement",
     "titleLabel": "Titre de l'événement",
     "titlePlaceholder": "ex. Course matinale",

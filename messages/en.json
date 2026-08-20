@@ -432,6 +432,10 @@
   "CreateEvent": {
     "modalTitle": "Create an Event",
     "success": "Event successfully created.",
+    "noOrgTitle": "Create an organization first",
+    "noOrgDescription": "You need an organization before you can create events. Set one up now to continue — you'll be taken straight to the event form afterward.",
+    "noOrgCreateButton": "Create Organization",
+    "noOrgCancelButton": "Cancel",
     "sectionBasic": "Event Details",
     "titleLabel": "Event Title",
     "titlePlaceholder": "e.g. Morning Trail Run",
