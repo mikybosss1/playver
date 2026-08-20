@@ -42,10 +42,12 @@ export default function CreateOrganizationWizard({
   initialState,
   onClose,
   onPublished,
+  onSaveDraft,
 }: {
   initialState?: WizardState;
   onClose: () => void;
   onPublished: (organizationId: string) => void;
+  onSaveDraft?: () => void;
 }) {
   const t = useTranslations("Organizer");
   const [state, setState] = useState<WizardState>(initialState ?? createInitialWizardState());
@@ -235,6 +237,7 @@ export default function CreateOrganizationWizard({
     setSaving(true);
     await persistStep(currentStep, undefined);
     setSaving(false);
+    onSaveDraft?.();
     onClose();
   }
 
@@ -262,11 +265,11 @@ export default function CreateOrganizationWizard({
   return (
     <div className="fixed inset-0 z-50 flex bg-white">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-[#0b1220] text-white flex flex-col overflow-y-auto">
+      <aside className="w-64 shrink-0 bg-white text-zinc-900 border-r border-zinc-200 flex flex-col overflow-y-auto">
         <div className="px-6 pt-6 pb-5 flex items-center justify-between">
           <div>
-            <p className="text-lg font-black tracking-tight text-emerald-400">PLAYVER</p>
-            <p className="text-xs text-zinc-400 mt-0.5">{t("wizardChromeTitle")}</p>
+            <p className="text-lg font-black tracking-tight text-[#e21d12]">PLAYVER</p>
+            <p className="text-xs text-zinc-500 mt-0.5">{t("wizardChromeTitle")}</p>
           </div>
         </div>
 
@@ -282,12 +285,12 @@ export default function CreateOrganizationWizard({
                 onClick={() => goToStep(step)}
                 disabled={!reachable}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors text-left ${
-                  isCurrent ? "bg-white text-zinc-900" : reachable ? "text-zinc-200 hover:bg-white/10" : "text-zinc-600 cursor-not-allowed"
+                  isCurrent ? "bg-red-50 text-[#e21d12]" : reachable ? "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900" : "text-zinc-300 cursor-not-allowed"
                 }`}
               >
                 <span
                   className={`size-6 rounded-full flex items-center justify-center text-xs shrink-0 ${
-                    isCurrent ? "bg-zinc-900 text-white" : step < state.furthestStep ? "bg-emerald-500 text-white" : "bg-white/10 text-zinc-400"
+                    isCurrent ? "bg-[#e21d12] text-white" : step < state.furthestStep ? "bg-[#e21d12] text-white" : "bg-zinc-100 text-zinc-400"
                   }`}
                 >
                   {step < state.furthestStep && !isCurrent ? (
@@ -348,7 +351,7 @@ export default function CreateOrganizationWizard({
                 type="button"
                 onClick={handlePublish}
                 disabled={saving || !confirmed}
-                className="px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
+                className="px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-[#e21d12] hover:bg-[#d41810] transition-colors shadow-sm disabled:opacity-50"
               >
                 {t("wizardPublishOrganization")}
               </button>
@@ -357,7 +360,7 @@ export default function CreateOrganizationWizard({
                 type="button"
                 onClick={handleContinue}
                 disabled={saving}
-                className="px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-60"
+                className="px-6 py-2.5 text-sm font-semibold text-white rounded-full bg-[#e21d12] hover:bg-[#d41810] transition-colors shadow-sm disabled:opacity-60"
               >
                 {saving ? t("wizardSaving") : currentStep === 9 ? t("wizardReviewAndPublish") : t("wizardContinue")}
               </button>

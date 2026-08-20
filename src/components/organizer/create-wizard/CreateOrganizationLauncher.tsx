@@ -16,9 +16,11 @@ type Mode = { view: "idle" } | { view: "choosing"; drafts: DraftOrganizationSumm
 export default function CreateOrganizationLauncher({
   trigger,
   onPublished,
+  onSaveDraft,
 }: {
   trigger: (open: () => void) => React.ReactNode;
   onPublished: (organizationId: string) => void;
+  onSaveDraft?: () => void;
 }) {
   const t = useTranslations("Organizer");
   const [mode, setMode] = useState<Mode>({ view: "idle" });
@@ -80,9 +82,9 @@ export default function CreateOrganizationLauncher({
                   type="button"
                   disabled={loading}
                   onClick={() => resumeDraft(draft.id)}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors text-left disabled:opacity-60"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 hover:border-red-300 hover:bg-red-50/50 transition-colors text-left disabled:opacity-60"
                 >
-                  <span className="size-10 rounded-lg bg-emerald-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                  <span className="size-10 rounded-lg bg-[#e21d12] flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                     {draft.logoUrl ? (
                       <Image src={draft.logoUrl} alt="" width={40} height={40} className="w-full h-full object-cover" />
                     ) : (
@@ -99,7 +101,7 @@ export default function CreateOrganizationLauncher({
               <button
                 type="button"
                 onClick={() => setMode({ view: "wizard" })}
-                className="mt-1 py-3 rounded-xl border-2 border-dashed border-zinc-200 text-sm font-semibold text-zinc-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
+                className="mt-1 py-3 rounded-xl border-2 border-dashed border-zinc-200 text-sm font-semibold text-zinc-500 hover:border-red-300 hover:text-[#e21d12] transition-colors"
               >
                 + {t("wizardStartNew")}
               </button>
@@ -112,6 +114,7 @@ export default function CreateOrganizationLauncher({
         <CreateOrganizationWizard
           initialState={mode.resume}
           onClose={close}
+          onSaveDraft={onSaveDraft}
           onPublished={(organizationId) => {
             close();
             onPublished(organizationId);

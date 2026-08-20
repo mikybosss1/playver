@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { EMPTY_LOCATION, type StepProps } from "./types";
 
 const inputClass =
-  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 placeholder:text-zinc-400 text-zinc-800";
+  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 placeholder:text-zinc-400 text-zinc-800";
 const labelClass = "text-sm font-semibold text-zinc-700";
 
 export default function Step5Contact({ state, update }: StepProps) {
@@ -26,7 +26,7 @@ export default function Step5Contact({ state, update }: StepProps) {
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 5, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>
@@ -95,7 +95,7 @@ export default function Step5Contact({ state, update }: StepProps) {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <label className={labelClass}>{t("wizardLocationsLabel")} *</label>
-            <button type="button" onClick={addLocation} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
+            <button type="button" onClick={addLocation} className="text-sm font-semibold text-[#e21d12] hover:text-red-700">
               + {t("wizardAddLocation")}
             </button>
           </div>

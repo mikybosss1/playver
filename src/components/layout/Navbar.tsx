@@ -8,7 +8,7 @@ import LanguageToggle from "@/components/layout/LanguageToggle";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import { useSession, signOut } from "@/lib/auth-client";
 
-const navHrefs = ["/tournaments", "/events", "/teams", "/request-a-feature"] as const;
+const navHrefs = ["/tournaments", "/events", "/teams"] as const;
 
 export default function Navbar() {
   const t = useTranslations("Navbar");
@@ -53,7 +53,6 @@ export default function Navbar() {
     { href: navHrefs[0], label: t("tournaments") },
     { href: navHrefs[1], label: t("discover") },
     { href: navHrefs[2], label: t("teams") },
-    { href: navHrefs[3], label: t("requestFeature") },
   ];
 
   return (

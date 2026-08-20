@@ -101,11 +101,21 @@ async function handleConnectAccountEvent(event: Stripe.Event) {
   if (event.type !== "account.updated") return;
   const account = event.data.object;
   const onboarded = Boolean(account.details_submitted && account.payouts_enabled);
-  await pool.query(`UPDATE "user" SET "stripeConnectOnboarded" = $1 WHERE "stripeConnectAccountId" = $2`, [
+
+  const userUpdate = await pool.query(
+    `UPDATE "user" SET "stripeConnectOnboarded" = $1 WHERE "stripeConnectAccountId" = $2 RETURNING id`,
+    [onboarded, account.id]
+  );
+  if (userUpdate.rowCount && userUpdate.rowCount > 0) {
+    revalidatePath("/dashboard/wallet");
+    return;
+  }
+
+  await pool.query(`UPDATE "organization" SET "stripeConnectOnboarded" = $1 WHERE "stripeConnectAccountId" = $2`, [
     onboarded,
     account.id,
   ]);
-  revalidatePath("/dashboard/wallet");
+  revalidatePath("/organizer/payments");
 }
 
 export async function POST(request: Request) {

@@ -5,7 +5,7 @@ import { slugify } from "@/lib/slug";
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS, SPORTS_OPTIONS, type StepProps } from "./types";
 
 const inputClass =
-  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 placeholder:text-zinc-400 text-zinc-800";
+  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 placeholder:text-zinc-400 text-zinc-800";
 const labelClass = "text-sm font-semibold text-zinc-700";
 
 export default function Step2Identity({ state, update }: StepProps) {
@@ -27,7 +27,7 @@ export default function Step2Identity({ state, update }: StepProps) {
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 2, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>
@@ -101,7 +101,7 @@ export default function Step2Identity({ state, update }: StepProps) {
                   type="button"
                   onClick={() => toggleSport(sport)}
                   className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
-                    selected ? "bg-emerald-600 border-emerald-600 text-white" : "bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-400"
+                    selected ? "bg-[#e21d12] border-[#e21d12] text-white" : "bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-400"
                   }`}
                 >
                   {sport}
@@ -113,7 +113,7 @@ export default function Step2Identity({ state, update }: StepProps) {
 
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>{t("wizardSlugLabel")} *</label>
-          <div className="flex items-center rounded-lg border border-zinc-200 bg-zinc-50 focus-within:ring-2 focus-within:ring-emerald-200 focus-within:border-emerald-400">
+          <div className="flex items-center rounded-lg border border-zinc-200 bg-zinc-50 focus-within:ring-2 focus-within:ring-red-200 focus-within:border-red-300">
             <span className="pl-4 text-sm text-zinc-400 select-none">playver.com/</span>
             <input
               type="text"

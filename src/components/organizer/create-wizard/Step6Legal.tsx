@@ -6,7 +6,7 @@ import { useUploadThing } from "@/lib/uploadthing";
 import { ORG_STATUS_OPTIONS, type PolicyMode, type StepProps } from "./types";
 
 const inputClass =
-  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 placeholder:text-zinc-400 text-zinc-800";
+  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 placeholder:text-zinc-400 text-zinc-800";
 const labelClass = "text-sm font-semibold text-zinc-700";
 
 type PolicyKey = "refund" | "privacy" | "codeOfConduct";
@@ -50,7 +50,7 @@ function PolicyRow({
             type="button"
             onClick={() => onModeChange("write")}
             className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
-              mode === "write" ? "bg-emerald-600 border-emerald-600 text-white" : "border-zinc-200 text-emerald-600 hover:border-emerald-400"
+              mode === "write" ? "bg-[#e21d12] border-[#e21d12] text-white" : "border-zinc-200 text-[#e21d12] hover:border-red-300"
             }`}
           >
             {t("wizardWriteOnline")}
@@ -107,7 +107,7 @@ export default function Step6Legal({ state, update }: StepProps) {
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 6, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>

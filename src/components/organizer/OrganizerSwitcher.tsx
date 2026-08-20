@@ -10,9 +10,11 @@ import type { OrganizationSummary } from "@/app/actions/organization";
 export default function OrganizerSwitcher({
   organizations,
   activeOrganizationId,
+  onSwitched,
 }: {
   organizations: OrganizationSummary[];
   activeOrganizationId: string;
+  onSwitched?: (organizationId: string) => void;
 }) {
   const t = useTranslations("Organizer");
   const router = useRouter();
@@ -51,7 +53,10 @@ export default function OrganizerSwitcher({
     const result = await setActiveOrganization(organizationId);
     setIsSwitching(false);
     setOpen(false);
-    if (!result.error) router.refresh();
+    if (!result.error) {
+      onSwitched?.(organizationId);
+      router.refresh();
+    }
   }
 
   if (!active) return null;

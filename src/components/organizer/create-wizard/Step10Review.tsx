@@ -36,7 +36,7 @@ export default function Step10Review({
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 10, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>
@@ -52,7 +52,7 @@ export default function Step10Review({
             )}
           </div>
           <div className="px-5 py-4 flex items-center gap-3 -mt-8">
-            <div className="size-14 rounded-xl border-4 border-white bg-emerald-500 flex items-center justify-center text-white font-bold overflow-hidden shrink-0 shadow-md">
+            <div className="size-14 rounded-xl border-4 border-white bg-[#e21d12] flex items-center justify-center text-white font-bold overflow-hidden shrink-0 shadow-md">
               {state.logoUrl ? (
                 <Image src={state.logoUrl} alt="" width={56} height={56} className="w-full h-full object-cover" />
               ) : (
@@ -87,7 +87,7 @@ export default function Step10Review({
         <ul className="flex flex-col gap-2">
           {checklist.map(({ key, done, optional }) => (
             <li key={key} className="flex items-center gap-2.5 text-sm">
-              <span className={`size-5 rounded-full flex items-center justify-center shrink-0 ${done ? "bg-emerald-500" : "bg-zinc-200"}`}>
+              <span className={`size-5 rounded-full flex items-center justify-center shrink-0 ${done ? "bg-[#e21d12]" : "bg-zinc-200"}`}>
                 {done && (
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
@@ -105,7 +105,7 @@ export default function Step10Review({
             type="checkbox"
             checked={confirmed}
             onChange={(e) => onConfirmedChange(e.target.checked)}
-            className="mt-0.5 size-4 accent-emerald-600"
+            className="mt-0.5 size-4 accent-[#e21d12]"
           />
           <span className="text-sm text-zinc-600">{t("wizardConfirmAuthorized")}</span>
         </label>
