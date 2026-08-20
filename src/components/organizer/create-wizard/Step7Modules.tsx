@@ -18,7 +18,7 @@ export default function Step7Modules({ state, update }: StepProps) {
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 7, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>
@@ -36,13 +36,13 @@ export default function Step7Modules({ state, update }: StepProps) {
               onClick={() => toggle(key, alwaysOn)}
               disabled={alwaysOn}
               className={`flex items-center justify-between text-left p-4 rounded-xl border-2 transition-colors ${
-                enabled ? "border-emerald-400 bg-emerald-50" : "border-zinc-200 bg-white hover:border-zinc-300"
+                enabled ? "border-red-300 bg-red-50" : "border-zinc-200 bg-white hover:border-zinc-300"
               } ${alwaysOn ? "cursor-default" : ""}`}
             >
               <span className="flex items-center gap-3">
                 <span
                   className={`size-5 rounded flex items-center justify-center shrink-0 ${
-                    enabled ? "bg-emerald-500" : "bg-white border border-zinc-300"
+                    enabled ? "bg-[#e21d12]" : "bg-white border border-zinc-300"
                   }`}
                 >
                   {enabled && (
@@ -57,7 +57,7 @@ export default function Step7Modules({ state, update }: StepProps) {
                 </span>
               </span>
               {alwaysOn && (
-                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold shrink-0">
+                <span className="px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold shrink-0">
                   {t("wizardAlwaysOn")}
                 </span>
               )}

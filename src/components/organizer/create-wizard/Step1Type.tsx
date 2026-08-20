@@ -19,7 +19,7 @@ export default function Step1Type({ state, update }: StepProps) {
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 1, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>
@@ -36,7 +36,7 @@ export default function Step1Type({ state, update }: StepProps) {
               type="button"
               onClick={() => update({ organizationType: key })}
               className={`flex items-start gap-3 text-left p-4 rounded-xl border-2 transition-colors ${
-                selected ? "border-emerald-500 bg-emerald-50" : "border-zinc-200 bg-white hover:border-zinc-300"
+                selected ? "border-[#e21d12] bg-red-50" : "border-zinc-200 bg-white hover:border-zinc-300"
               }`}
             >
               <span className="text-2xl leading-none shrink-0">{icon}</span>

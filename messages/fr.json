@@ -431,6 +431,7 @@
   },
   "CreateEvent": {
     "modalTitle": "Créer un événement",
+    "creatingFor": "Création pour",
     "success": "Événement créé avec succès.",
     "noOrgTitle": "Créez d'abord une organisation",
     "noOrgDescription": "Vous devez avoir une organisation avant de pouvoir créer des événements. Configurez-en une maintenant pour continuer — vous serez amené directement au formulaire d'événement ensuite.",

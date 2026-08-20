@@ -7,7 +7,7 @@ import { useUploadThing } from "@/lib/uploadthing";
 import { BRAND_COLOR_OPTIONS, type StepProps } from "./types";
 
 const inputClass =
-  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 placeholder:text-zinc-400 text-zinc-800";
+  "w-full px-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 placeholder:text-zinc-400 text-zinc-800";
 const labelClass = "text-sm font-semibold text-zinc-700";
 
 function UploadBox({
@@ -28,7 +28,7 @@ function UploadBox({
       type="button"
       onClick={onPick}
       disabled={uploading}
-      className="w-full rounded-xl border-2 border-dashed border-zinc-200 hover:border-emerald-400 transition-colors overflow-hidden disabled:opacity-60"
+      className="w-full rounded-xl border-2 border-dashed border-zinc-200 hover:border-red-300 transition-colors overflow-hidden disabled:opacity-60"
     >
       {imageUrl ? (
         <div className="relative w-full h-40">
@@ -74,7 +74,7 @@ export default function Step3Branding({ state, update }: StepProps) {
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 3, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>

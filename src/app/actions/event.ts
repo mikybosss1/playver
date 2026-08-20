@@ -222,15 +222,16 @@ export async function createEvent(data: {
 export async function getEvents() {
   await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName",
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName",
        CASE WHEN e."eventType" = 'Tournament'
          THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
          ELSE COUNT(ep.id)
        END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
-     GROUP BY e.id, u.name
+     GROUP BY e.id, u.name, o.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
@@ -242,12 +243,13 @@ export async function getEvents() {
 export async function getTournamentEvents() {
   await ensureTournamentTables();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(tt.id) as "participantCount"
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName", COUNT(tt.id) as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      LEFT JOIN "tournament_team" tt ON tt."tournamentId" = e.id AND tt.status = 'active'
      WHERE e."eventType" = 'Tournament'
-     GROUP BY e.id, u.name
+     GROUP BY e.id, u.name, o.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
@@ -263,12 +265,13 @@ export async function getMyTournaments() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return [];
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(tt.id) as "participantCount"
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName", COUNT(tt.id) as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      LEFT JOIN "tournament_team" tt ON tt."tournamentId" = e.id AND tt.status = 'active'
      WHERE e."organizerId" = $1 AND e."eventType" = 'Tournament' AND e."organizationId" IS NULL
-     GROUP BY e.id, u.name
+     GROUP BY e.id, u.name, o.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
@@ -283,9 +286,10 @@ export async function getJoinedTournaments() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return [];
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName", COUNT(all_tt.id) as "participantCount"
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName", COUNT(all_tt.id) as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      JOIN "tournament_team" my_tt ON my_tt."tournamentId" = e.id
        AND (
          my_tt."captainId" = $1
@@ -296,7 +300,7 @@ export async function getJoinedTournaments() {
        )
      LEFT JOIN "tournament_team" all_tt ON all_tt."tournamentId" = e.id AND all_tt.status = 'active'
      WHERE e."organizerId" <> $1 AND e."eventType" = 'Tournament'
-     GROUP BY e.id, u.name
+     GROUP BY e.id, u.name, o.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
@@ -309,16 +313,17 @@ export async function getJoinedTournaments() {
 export async function getEventById(eventId: string) {
   await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName",
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName",
        CASE WHEN e."eventType" = 'Tournament'
          THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
          ELSE COUNT(ep.id)
        END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
      WHERE e.id = $1
-     GROUP BY e.id, u.name`,
+     GROUP BY e.id, u.name, o.name`,
     [eventId]
   );
   return result.rows[0] ? serializeEvent(result.rows[0]) : null;
@@ -330,16 +335,17 @@ export async function getMyEvents() {
   await ensureEventParticipantsTable();
 
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName",
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName",
        CASE WHEN e."eventType" = 'Tournament'
          THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
          ELSE COUNT(ep.id)
        END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
      WHERE e."organizerId" = $1
-     GROUP BY e.id, u.name
+     GROUP BY e.id, u.name, o.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
@@ -361,16 +367,17 @@ export async function getMyLegacyEvents() {
   await ensureEventParticipantsTable();
 
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName",
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName",
        CASE WHEN e."eventType" = 'Tournament'
          THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
          ELSE COUNT(ep.id)
        END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      LEFT JOIN "event_participant" ep ON ep."eventId" = e.id
      WHERE e."organizerId" = $1 AND e."organizationId" IS NULL
-     GROUP BY e.id, u.name
+     GROUP BY e.id, u.name, o.name
      ORDER BY
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN 0 ELSE 1 END ASC,
        CASE WHEN e.status = 'active' AND e."endDateTime" >= NOW() THEN e."startDateTime" END ASC NULLS LAST,
@@ -386,13 +393,14 @@ export async function getJoinedEvents() {
   await ensureEventParticipantsTable();
 
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName",
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName",
        CASE WHEN e."eventType" = 'Tournament'
          THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
          ELSE (SELECT COUNT(*) FROM "event_participant" all_ep WHERE all_ep."eventId" = e.id)
        END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      WHERE e."organizerId" <> $1
        AND (
          EXISTS (SELECT 1 FROM "event_participant" ep WHERE ep."eventId" = e.id AND ep."userId" = $1)
@@ -442,13 +450,14 @@ export async function getEventParticipants(eventId: string): Promise<EventPartic
 export async function getTeamEvents(teamId: string): Promise<EventItem[]> {
   await ensureEventParticipantsTable();
   const result = await pool.query(
-    `SELECT e.*, u.name as "organizerName",
+    `SELECT e.*, COALESCE(o.name, u.name) as "organizerName",
        CASE WHEN e."eventType" = 'Tournament'
          THEN (SELECT COUNT(*) FROM "tournament_team" tt WHERE tt."tournamentId" = e.id AND tt.status = 'active')
          ELSE (SELECT COUNT(*) FROM "event_participant" all_ep WHERE all_ep."eventId" = e.id)
        END as "participantCount"
      FROM "event" e
      JOIN "user" u ON e."organizerId" = u.id
+     LEFT JOIN "organization" o ON o.id = e."organizationId"
      WHERE e.id IN (
        -- Regular events: any team member is a participant
        SELECT ep."eventId"
@@ -461,7 +470,7 @@ export async function getTeamEvents(teamId: string): Promise<EventItem[]> {
        FROM "tournament_team" tt
        WHERE tt."linkedTeamId" = $1
      )
-     GROUP BY e.id, u.name
+     GROUP BY e.id, u.name, o.name
      ORDER BY e."startDateTime" ASC`,
     [teamId]
   );

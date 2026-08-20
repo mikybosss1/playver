@@ -6,20 +6,31 @@ import { useTranslations } from "next-intl";
 import CreateEventForm from "@/components/events/CreateEventForm";
 import SuccessToast from "@/components/ui/SuccessToast";
 import CreateOrganizationLauncher from "@/components/organizer/create-wizard/CreateOrganizationLauncher";
-import { getActiveOrganization, setActiveOrganization } from "@/app/actions/organization";
+import OrganizerSwitcher from "@/components/organizer/OrganizerSwitcher";
+import { getActiveOrganization, setActiveOrganization, getUserOrganizations } from "@/app/actions/organization";
+import type { OrganizationSummary } from "@/app/actions/organization";
 
 type View = "closed" | "checking" | "noOrg" | "createEvent";
 
 export default function CreateEventButton({ label }: { label: string }) {
   const [view, setView] = useState<View>("closed");
   const [toastKey, setToastKey] = useState(0);
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const t = useTranslations("CreateEvent");
   const router = useRouter();
 
   async function handleClick() {
     setView("checking");
     const active = await getActiveOrganization();
-    setView(active ? "createEvent" : "noOrg");
+    if (!active) {
+      setView("noOrg");
+      return;
+    }
+    const orgs = await getUserOrganizations();
+    setActiveOrgId(active.organization.id);
+    setOrganizations(orgs);
+    setView("createEvent");
   }
 
   async function handleOrgPublished(organizationId: string) {
@@ -27,6 +38,9 @@ export default function CreateEventButton({ label }: { label: string }) {
     // resolves the creator's org via the active_org_id cookie), so switch to
     // it before continuing straight into the event form — no extra click.
     await setActiveOrganization(organizationId);
+    const orgs = await getUserOrganizations();
+    setActiveOrgId(organizationId);
+    setOrganizations(orgs);
     setView("createEvent");
   }
 
@@ -58,6 +72,7 @@ export default function CreateEventButton({ label }: { label: string }) {
             <div className="flex flex-col gap-2">
               <CreateOrganizationLauncher
                 onPublished={handleOrgPublished}
+                onSaveDraft={() => setView("closed")}
                 trigger={(open) => (
                   <button
                     type="button"
@@ -94,6 +109,26 @@ export default function CreateEventButton({ label }: { label: string }) {
                 </svg>
               </button>
             </div>
+            {activeOrgId && (
+              <div className="px-6 pt-4 flex items-center gap-2.5">
+                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide shrink-0">
+                  {t("creatingFor")}
+                </span>
+                {organizations.length > 1 ? (
+                  <div className="w-56">
+                    <OrganizerSwitcher
+                      organizations={organizations}
+                      activeOrganizationId={activeOrgId}
+                      onSwitched={setActiveOrgId}
+                    />
+                  </div>
+                ) : (
+                  <span className="text-sm font-semibold text-zinc-900">
+                    {organizations.find((o) => o.id === activeOrgId)?.name}
+                  </span>
+                )}
+              </div>
+            )}
             <div className="p-6">
               <CreateEventForm onSuccess={handleSuccess} onCancel={() => setView("closed")} />
             </div>

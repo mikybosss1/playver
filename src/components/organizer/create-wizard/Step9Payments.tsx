@@ -32,7 +32,7 @@ export default function Step9Payments({ state, update }: StepProps) {
 
   return (
     <div>
-      <p className="text-xs font-bold tracking-wide uppercase text-emerald-600 mb-2">
+      <p className="text-xs font-bold tracking-wide uppercase text-[#e21d12] mb-2">
         {t("wizardStepLabel", { current: 9, total: 10 })}
       </p>
       <h2 className="text-2xl font-extrabold text-zinc-900 mb-2" style={{ fontFamily: "var(--font-playfair)" }}>
@@ -41,14 +41,14 @@ export default function Step9Payments({ state, update }: StepProps) {
       <p className="text-sm text-zinc-500 mb-8 max-w-md">{t("wizardPaymentsSubtitle")}</p>
 
       <div className="max-w-xl flex flex-col gap-5">
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-5 py-4">
-          <p className="text-sm font-bold text-emerald-800 mb-1">{t("wizardPoweredByStripe")}</p>
-          <p className="text-sm text-emerald-700">{t("wizardStripeExplainer")}</p>
+        <div className="rounded-lg bg-red-50 border border-red-200 px-5 py-4">
+          <p className="text-sm font-bold text-red-800 mb-1">{t("wizardPoweredByStripe")}</p>
+          <p className="text-sm text-red-700">{t("wizardStripeExplainer")}</p>
         </div>
 
         {state.connectOnboarded ? (
           <div className="rounded-lg border border-zinc-200 px-5 py-4 flex items-center gap-3">
-            <span className="size-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+            <span className="size-8 rounded-full bg-[#e21d12] flex items-center justify-center shrink-0">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -70,7 +70,7 @@ export default function Step9Payments({ state, update }: StepProps) {
         <ul className="flex flex-col gap-2">
           {["wizardPaymentsFeature1", "wizardPaymentsFeature2", "wizardPaymentsFeature3", "wizardPaymentsFeature4", "wizardPaymentsFeature5"].map((key) => (
             <li key={key} className="flex items-center gap-2 text-sm text-zinc-600">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e21d12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               {t(key)}
