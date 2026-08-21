@@ -1,3 +1,6 @@
+// Org wallet page (/organizer/payments) — permission-denied renders
+// ComingSoonPanel instead of throwing, same pattern as the other
+// permission-gated organizer pages.
 import { getTranslations } from "next-intl/server";
 import { ForbiddenError } from "@/lib/organizer-errors";
 import { getOrganizationWalletOverview } from "@/app/actions/organizer-wallet";

@@ -1,5 +1,9 @@
 "use client";
 
+// Invite-by-email modal used from PeopleClient. `assignableRoles` is
+// pre-filtered by the caller via canAssignRole() so this component never
+// needs to know the current user's own role — it just can't offer a role
+// the caller isn't allowed to grant.
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { inviteOrganizationMember } from "@/app/actions/organizer-people";

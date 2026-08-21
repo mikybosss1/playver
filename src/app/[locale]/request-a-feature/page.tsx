@@ -1,3 +1,5 @@
+// Static feature-request form. Note: not wired to any server action yet
+// (no onSubmit, no backing table) — submitting currently does nothing.
 import { getTranslations } from "next-intl/server";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";

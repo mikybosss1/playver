@@ -1,3 +1,9 @@
+// Shared Resend client + HTML-email building blocks used by every file in
+// src/lib/emails/. `layout()` wraps a template's inner HTML in the common
+// card/logo/footer shell; `ctaButton()`/`detail()`/`detailTable()` are small
+// reusable pieces for buttons and label/value rows (e.g. event date, price).
+// Individual templates (account.ts, organization.ts, event/, team/,
+// tournament/) each own their own copy/subject and just call these helpers.
 import { Resend } from "resend";
 
 export const resend = new Resend(process.env.RESEND_API_KEY);

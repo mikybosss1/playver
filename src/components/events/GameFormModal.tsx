@@ -1,5 +1,9 @@
 "use client";
 
+// Create/edit form for a scheduled game within a tournament (teams, court,
+// round, time). Home/away teams may be left unset ("TBD") for
+// bracket games scheduled before pool play resolves — see
+// game-tables.ts's homeTeamId/awayTeamId nullability.
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import type { PublicTournamentTeam } from "@/app/actions/tournament";

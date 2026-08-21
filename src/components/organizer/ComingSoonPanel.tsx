@@ -1,3 +1,6 @@
+// Generic placeholder panel for organizer nav items that route to a real
+// page but aren't built yet (e.g. Programs, Reports). Distinct from
+// FeedSidebar's "soon" nav items, which don't route anywhere at all.
 export default function ComingSoonPanel({
   eyebrow,
   title,

@@ -1,3 +1,8 @@
+// Auth-gated shell for the athlete dashboard (/dashboard/*): redirects
+// anonymous visitors to sign-in, then renders Navbar + DashboardSidebar
+// around the page content. The site-wide user.role ("player"/"organizer"/
+// "super_admin") is read here for the sidebar, separate from the per-org
+// OrgRole used under /organizer/*.
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";

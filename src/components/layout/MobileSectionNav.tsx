@@ -1,5 +1,8 @@
 "use client";
 
+// Sticky in-page section jump nav for mobile (distinct from
+// MobileBottomNav, which is site-wide) — tracks the current hash to
+// highlight the active section as the user scrolls.
 import { useEffect, useState } from "react";
 
 export type SectionNavItem = {

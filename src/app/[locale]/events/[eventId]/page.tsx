@@ -1,3 +1,8 @@
+// Public event/tournament detail page — the single biggest data-fetching
+// page in the app, gathering everything EventDetailsTabs needs up front
+// (participants, tournament teams/join-requests, games, mini-events, wallet
+// balance) via several parallel Promise.all batches, since the tabs render
+// client-side with no per-tab fetch.
 import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";

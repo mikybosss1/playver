@@ -1,5 +1,9 @@
 "use client";
 
+// Read-only leaderboard modal for a mini-event (free-for-all side
+// competition, see miniEvent.ts) — ranks by score descending, top 3 get a
+// medal emoji. Entry/editing of scores happens in MiniEventResultModal
+// (singular), a separate component.
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";

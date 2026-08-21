@@ -1,5 +1,9 @@
 "use client";
 
+// Wizard step 5 of 10: public contact info, social links, and physical
+// locations (locations are a separate array, persisted via
+// setOrganizationLocations rather than a plain draft field — see
+// persistStep case 5).
 import { useTranslations } from "next-intl";
 import { EMPTY_LOCATION, type StepProps } from "./types";
 

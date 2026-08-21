@@ -1,3 +1,6 @@
+// /dashboard overview: upcoming events (owned + joined) and team count for
+// the signed-in athlete. dashboard/layout.tsx already guarantees a session
+// exists, hence the non-null `session!.user` below.
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { getTranslations } from "next-intl/server";

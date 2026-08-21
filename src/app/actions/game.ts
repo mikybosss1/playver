@@ -1,5 +1,12 @@
 "use server";
 
+// Games *within* a tournament: scheduling, results, and per-player box scores
+// (points/rebounds/assists/steals/blocks — see game-sports.ts's
+// sportTracksBoxScore(), currently Basketball only). A "tournament" here is
+// just an `event` row with eventType 'Tournament'; games reference it via
+// tournamentId = event.id. Box-score tables self-create lazily — see
+// ensureGameTables() in src/lib/game-tables.ts.
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -83,6 +90,12 @@ type GameRow = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Note: this only recognizes the tournament's original creator (organizerId)
+// or a super_admin — unlike event.ts's authorizeEventManagement(), it does NOT
+// check org-level MANAGE_EVENTS permission. An org STAFF member who didn't
+// personally create the tournament can edit its details via event.ts but
+// can't manage its games/results through this file. Worth reconciling if game
+// management needs to open up to the same org-permission model.
 export async function assertCanManageTournament(tournamentId: string, userId: string) {
   const [eventRes, roleRes] = await Promise.all([
     pool.query(`SELECT "organizerId" FROM "event" WHERE id = $1`, [tournamentId]),

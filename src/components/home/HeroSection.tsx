@@ -1,5 +1,9 @@
 "use client";
 
+// Marketing homepage hero (rendered by app/[locale]/page.tsx for
+// logged-out visitors). "use client" only for the mount fade-in animation;
+// the CTA copy itself is static/translated. `isLoggedIn` just toggles a
+// second "create event" button.
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";

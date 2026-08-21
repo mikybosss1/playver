@@ -1,5 +1,14 @@
 "use server";
 
+// Site-admin-only operations, gated by requireSuperAdmin() (checks the
+// user.role column directly — separate from and unrelated to the org-level
+// OrgRole/permission system in organizer-permissions.ts). Covers: global user
+// role management, and hard moderation actions on events (force-add/remove a
+// participant, force-delete) that bypass the normal organizer-permission
+// checks in event.ts. Every mutation here fires the same notification emails
+// a normal user-triggered action would, so participants aren't left in the
+// dark about an admin intervening.
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";

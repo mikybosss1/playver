@@ -1,5 +1,12 @@
 "use client";
 
+// The 10-step create-organization wizard shell: owns `state`/`currentStep`,
+// validates and persists one step at a time (see persistStep below), and
+// renders the matching Step*.tsx for `currentStep`. Step 2 is special — it's
+// the step that actually creates the draft organization row (every step
+// before that has nothing to save yet); every step after it just updates
+// that same draft row via updateOrganizationDraft. Step10Review calls
+// publishOrganization() to flip the draft to a real, published org.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -85,6 +92,10 @@ export default function CreateOrganizationWizard({
   // Persists whatever the current step owns. Returns an error message, or
   // null on success (including "nothing to do yet", e.g. step 1 before the
   // draft row exists).
+  // Saves the given step's fields to the draft (or creates it, on step 2)
+  // and, if `advanceTo` is given, advances the draft's stored wizardStep —
+  // this is what makes "resume where I left off" work from
+  // CreateOrganizationLauncher's draft picker.
   async function persistStep(step: number, advanceTo?: number): Promise<string | null> {
     switch (step) {
       case 1: {

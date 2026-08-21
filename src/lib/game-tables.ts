@@ -1,3 +1,5 @@
+// Lazy schema for game.ts's tables (games + player box scores) — see
+// ARCHITECTURE.md §5 for the lazy-DDL vs. migration-script split.
 import { pool } from "@/lib/db";
 
 let gameTablesReady: Promise<void> | null = null;

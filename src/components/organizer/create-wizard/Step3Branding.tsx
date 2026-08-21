@@ -1,5 +1,7 @@
 "use client";
 
+// Wizard step 3 of 10: logo/cover image upload (via UploadThing), slogan,
+// brand color.
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";

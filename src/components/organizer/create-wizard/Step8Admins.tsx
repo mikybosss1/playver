@@ -1,5 +1,9 @@
 "use client";
 
+// Wizard step 8 of 10: invite additional staff by email + OrgRole before
+// publishing (OWNER is excluded — that's the creating user, implicitly).
+// Invites are only actually sent on step submit, via persistStep case 8
+// calling inviteOrganizationMembers.
 import { useTranslations } from "next-intl";
 import { ORG_ROLES, type OrgRole } from "@/lib/organizer-permissions";
 import type { StepProps } from "./types";

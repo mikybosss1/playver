@@ -1,5 +1,26 @@
 "use server";
 
+// The biggest file in the app: event CRUD, join/leave (both free and paid —
+// wallet-funded and Stripe direct-checkout), custom registration form fields,
+// cancel/postpone with refund + notification emails, and all the read queries
+// that back the public discover page, the athlete dashboard, and the
+// organizer dashboard's event lists.
+//
+// Two things to know before editing this file:
+// 1. Events are either "legacy" (organizerId only, organizationId IS NULL —
+//    a small fixed set of pre-existing rows from before orgs were required)
+//    or org-owned. `createEvent` only ever produces org-owned events now; the
+//    legacy branch exists purely to keep old rows working. Money for an
+//    org-owned event's payments goes to the org's wallet (organizer-wallet.ts);
+//    for a legacy event it goes to the creator's personal wallet (wallet.ts).
+// 2. `authorizeEventManagement()` below is the shared gate for update/cancel/
+//    postpone — authorized if you're the creator OR you hold MANAGE_EVENTS in
+//    the event's org. Reuse it rather than re-deriving authorization.
+//
+// The trickiest logic (payment completion, the refund sweep) already has
+// detailed comments in place at each function — read those before changing
+// money-movement code.
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import type { PoolClient } from "@neondatabase/serverless";

@@ -1,3 +1,6 @@
+// Organizer console's event list — org-scoped, requires MANAGE_EVENTS (via
+// getOrganizationEventsFull); ForbiddenError renders a permission-denied
+// ComingSoonPanel instead of a hard error.
 import { getTranslations } from "next-intl/server";
 import { ForbiddenError } from "@/lib/organizer-errors";
 import { getOrganizationEventsFull } from "@/app/actions/organizer-events";

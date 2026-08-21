@@ -1,5 +1,6 @@
 "use client";
 
+// Captain-only kick control for a standalone team member.
 import { useState, useTransition } from "react";
 import { removeTeamMember } from "@/app/actions/team";
 

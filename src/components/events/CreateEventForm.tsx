@@ -1,5 +1,12 @@
 "use client";
 
+// The single form used to both create and edit an event/tournament/league —
+// passing `eventId` (+ `initialData`) switches it into edit mode
+// (updateEvent instead of createEvent); this is also what
+// OrganizerEventEditForm.tsx wraps for the organizer console. Covers: basic
+// details, individual vs. team registration, pricing, image gallery,
+// agenda, and a dynamic custom-registration-fields builder (FormFieldDraft)
+// whose responses are collected later by EventJoinButton/joinEventWithForm.
 import { useState, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";

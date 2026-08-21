@@ -1,5 +1,10 @@
 "use client";
 
+// "Create Event" entry point used on the public /events page and elsewhere.
+// On click, checks the user's active organization first: no org -> prompts
+// to become an organizer (via CreateOrganizationLauncher); has one (or
+// more) -> opens CreateEventForm directly, letting them switch which org
+// they're creating for via OrganizerSwitcher.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

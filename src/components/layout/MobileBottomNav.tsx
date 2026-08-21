@@ -1,5 +1,7 @@
 "use client";
 
+// Fixed bottom tab bar shown on small screens (Navbar renders this and
+// hides its own links below the md breakpoint).
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
 import { useSession } from "@/lib/auth-client";

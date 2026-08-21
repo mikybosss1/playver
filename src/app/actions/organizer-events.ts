@@ -1,5 +1,9 @@
 "use server";
 
+// Thin organizer-scoped read layer over event.ts, for the /organizer/events
+// list and detail page. Doesn't own event data itself — just adds the org
+// membership/permission checks that the public event.ts queries don't do.
+
 import { pool } from "@/lib/db";
 import { requireOrganizationPermission } from "./organization";
 import { hasPermission, type OrgRole } from "@/lib/organizer-permissions";

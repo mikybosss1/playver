@@ -1,5 +1,9 @@
 "use client";
 
+// Organizer control for cancelling or postponing an event. `isPaid` changes
+// the cancel-confirm copy (cancelling a paid event triggers automatic
+// refunds — see event.ts's cancelEvent, and the withdrawal-hold logic in
+// organizer-wallet.ts that keeps funds available for exactly this case).
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

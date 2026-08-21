@@ -1,3 +1,7 @@
+// Landing page for the tournament_team_member confirm/decline email link
+// (?token=...&action=confirm|decline). Shows the right icon/copy up front
+// based on the `action` param, then TournamentConfirmButtons performs the
+// actual confirm/decline call.
 import { notFound } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";

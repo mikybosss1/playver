@@ -1,3 +1,6 @@
+// The homepage (/) — same marketing page for everyone (logged in or not);
+// `isLoggedIn` only toggles an extra CTA button in HeroSection. This is
+// distinct from /dashboard, which is the athlete's actual signed-in home.
 import { headers } from "next/headers";
 import Navbar from "@/components/layout/Navbar";
 import HeroSection from "@/components/home/HeroSection";

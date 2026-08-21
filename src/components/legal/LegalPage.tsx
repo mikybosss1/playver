@@ -1,3 +1,6 @@
+// Generic renderer for every /legal/[slug] page (terms, privacy, refunds,
+// cookies, acceptable-use) — the actual copy lives as structured data in
+// src/content/legal/, not in this component.
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Link } from "@/i18n/routing";

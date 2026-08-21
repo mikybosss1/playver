@@ -1,5 +1,11 @@
 "use client";
 
+// Team-registration entry point for a tournament: create a brand-new
+// tournament_team ("new" mode) or bring in one of the player's existing
+// standalone teams ("existing" mode, via importExistingTeamForTournament —
+// see tournament-tables.ts's isImportedTeam/linkedTeamId columns). Paid
+// tournaments settle via payForTeamWithWallet, mirroring EventJoinButton's
+// wallet-credit-then-charge pattern.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Link } from "@/i18n/routing";

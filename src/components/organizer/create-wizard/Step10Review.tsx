@@ -1,5 +1,8 @@
 "use client";
 
+// Wizard step 10 of 10: read-only summary of everything entered, a
+// completeness score, and the final confirm checkbox that gates
+// CreateOrganizationWizard's handlePublish -> publishOrganization() call.
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { computeCompleteness } from "@/lib/organization-completeness";

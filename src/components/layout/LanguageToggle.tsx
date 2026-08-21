@@ -1,5 +1,7 @@
 "use client";
 
+// EN/FR switcher — navigates to the same pathname under the other locale
+// via next-intl's locale-aware router (see src/i18n/routing.ts).
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/routing";
 

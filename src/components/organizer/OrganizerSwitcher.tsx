@@ -1,5 +1,9 @@
 "use client";
 
+// Dropdown for switching between the orgs the signed-in user belongs to.
+// Calls setActiveOrganization() (writes the active_org_id cookie) then
+// router.refresh() so every server component under organizer/layout.tsx
+// re-fetches scoped to the newly active org.
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "@/i18n/routing";

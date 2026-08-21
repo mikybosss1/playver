@@ -1,3 +1,7 @@
+// /legal index: links to each doc under /legal/[slug]/page.tsx. Titles come
+// from legalPages (content/legal/types.ts); the short descriptions below
+// are local to this page only (not reused elsewhere), hardcoded per-locale
+// rather than going through next-intl.
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Link } from "@/i18n/routing";

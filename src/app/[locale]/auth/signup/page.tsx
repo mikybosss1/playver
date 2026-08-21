@@ -1,3 +1,5 @@
+// /auth/signup — thin page wrapper around SignUpForm; same ?callbackUrl=
+// pass-through pattern as auth/signin/page.tsx.
 import { getTranslations } from "next-intl/server";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";

@@ -1,3 +1,5 @@
+// Standalone-team emails (src/app/actions/team.ts), not tournament teams —
+// see tournament/index.ts for tournament_team roster emails.
 import { resend, FROM, BASE_URL, layout, ctaButton, detail, detailTable } from "../_shared";
 
 // ── Team joined ───────────────────────────────────────────────────────────────

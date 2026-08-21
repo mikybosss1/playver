@@ -1,3 +1,6 @@
+// Staff roster + pending invitations (/organizer/people) — see
+// organizer-people.ts. `currentUserId` is passed down so PeopleClient can
+// hide "remove"/"change role" actions on the viewer's own row.
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";

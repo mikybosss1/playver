@@ -1,3 +1,7 @@
+// Landing page for a tournament_team invite-code link (?code=...). Requires
+// sign-in first (redirects to /auth/signin with a callbackUrl pointing back
+// here) since accepting adds the current user as a team member — unlike the
+// tournament_team_member confirm-link flow, which needs no session.
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";

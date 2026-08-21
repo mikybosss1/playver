@@ -1,5 +1,10 @@
 "use client";
 
+// Three tournament_team panels rendered in the event-detail Teams tab:
+// TournamentCaptainPanel (full roster/recruitment/join-request management,
+// captain only), TournamentMemberPanel (read-only view for regular
+// members), and JoinOpenTeamButton (join a team whose recruitmentStatus is
+// open, for non-members browsing). All three call into tournament.ts.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";

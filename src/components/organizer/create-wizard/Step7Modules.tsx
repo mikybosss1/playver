@@ -1,5 +1,8 @@
 "use client";
 
+// Wizard step 7 of 10: toggles which optional modules (posts, programs,
+// etc.) the org has enabled — see src/lib/organization-modules.ts for the
+// canonical module list and which ones are always-on.
 import { useTranslations } from "next-intl";
 import { ORGANIZATION_MODULES } from "@/lib/organization-modules";
 import type { StepProps } from "./types";

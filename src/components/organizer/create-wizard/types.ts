@@ -1,3 +1,9 @@
+// Shared state/types for the 10-step create-organization wizard
+// (CreateOrganizationWizard.tsx + Step1Type.tsx..Step10Review.tsx). One flat
+// WizardState object is threaded through every step via StepProps
+// (state + update()); each step only reads/writes its own slice of it. The
+// wizard persists incrementally to the DB as an in-progress "draft" org, so
+// wizardStateFromDraft() rehydrates this same shape when a user resumes.
 import type { OrgRole } from "@/lib/organizer-permissions";
 import type { LocationInput, OrganizationDraftState } from "@/app/actions/organization";
 import { DEFAULT_ENABLED_MODULES } from "@/lib/organization-modules";

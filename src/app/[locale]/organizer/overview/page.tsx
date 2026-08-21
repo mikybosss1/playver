@@ -1,3 +1,6 @@
+// Organizer console's landing page (/organizer/overview, default redirect
+// target of /organizer). Currently mostly a placeholder — no dashboard
+// metrics wired up yet.
 import { getTranslations } from "next-intl/server";
 import { getActiveOrganization } from "@/app/actions/organization";
 

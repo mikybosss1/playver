@@ -1,5 +1,10 @@
 "use server";
 
+// The organizer's view of who has registered for their events/tournaments —
+// participant counts, rosters, and export-style summaries for the
+// /organizer/registrations page. Read-only; actual join/leave/payment logic
+// lives in event.ts and tournament.ts.
+
 import { pool } from "@/lib/db";
 import { requireOrganizationPermission } from "./organization";
 import { hasPermission } from "@/lib/organizer-permissions";

@@ -1,5 +1,8 @@
 "use client";
 
+// Public /teams browse grid with client-side search. Note there's no "join
+// team" button here — team.ts has no public join flow (captains add members
+// directly); joined members only see LeaveTeamButton.
 import { useState } from "react";
 import Image from "next/image";
 import { Link } from "@/i18n/routing";

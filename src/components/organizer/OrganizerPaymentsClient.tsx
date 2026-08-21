@@ -1,5 +1,8 @@
 "use client";
 
+// Org wallet page: Stripe Connect onboarding link + balance/withdrawal UI.
+// `overview.availableBalance` already excludes the 48h post-event hold (see
+// organizer-wallet.ts) — this component just renders it, no hold-math here.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

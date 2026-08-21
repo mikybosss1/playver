@@ -1,5 +1,9 @@
 "use client";
 
+// Staff roster + pending invitations table for /organizer/people. Role
+// changes/removals/invites all go through organizer-people.ts actions,
+// which re-check canAssignRole() server-side — the client-side
+// assignableRoles() filter below is a UX nicety, not the real gate.
 import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";

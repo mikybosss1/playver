@@ -1,5 +1,27 @@
 "use server";
 
+// Tournament team registration — the second-largest file in the app.
+// "tournament_team" is a distinct table from the standalone "team"/"team_member"
+// in team.ts: a tournament team is created fresh per-tournament (via
+// createTournamentTeam) or imported from an existing standalone team
+// (importExistingTeamForTournament, which links it via linkedTeamId so the
+// same roster can register for multiple tournaments).
+//
+// Two ways people join a tournament team:
+// 1. **Invite code** — captain shares a code (joinTeamViaInvite), or invites a
+//    specific email which gets a tokenized confirm/decline link
+//    (confirmTournamentMembership/declineTournamentMembership).
+// 2. **Join request** — a player requests to join an open-recruitment team;
+//    the captain accepts/rejects (requestToJoinTeam/respondToJoinRequest).
+//
+// Team registration payment (payForTeamWithWallet) follows the same
+// wallet-debit/organizer-credit pattern as event.ts's payForEventWithWallet —
+// see that function's comments for the shared reasoning.
+//
+// Authorization for tournament-level actions (not team-level) reuses
+// game.ts's assertCanManageTournament(), with the same creator-or-super-admin
+// gap noted there.
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";

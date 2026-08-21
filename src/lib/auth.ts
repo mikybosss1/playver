@@ -1,3 +1,7 @@
+// Server-only Better Auth instance — session checks in Server Components/
+// actions use `auth.api.getSession({ headers })` from here. The Client
+// Component counterpart (signIn/signUp/signOut/useSession) is auth-client.ts;
+// don't import this file into a "use client" component.
 import { betterAuth } from "better-auth";
 import { Pool } from "@neondatabase/serverless";
 import { sendWelcomeEmail } from "@/lib/emails";

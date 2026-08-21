@@ -1,3 +1,5 @@
+// Emails sent to the organizer side of an event (new participant, event
+// full). Player-facing counterparts live in ./player.ts.
 import { resend, FROM, BASE_URL, layout, ctaButton, detail, detailTable } from "../_shared";
 
 // ── New participant joined ────────────────────────────────────────────────────

@@ -1,5 +1,7 @@
 "use client";
 
+// Avatar dropdown in OrganizerTopNav: shows the org role badge, a link back
+// to the athlete /dashboard, and sign-out.
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";

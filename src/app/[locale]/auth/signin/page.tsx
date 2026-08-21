@@ -1,3 +1,5 @@
+// /auth/signin — thin page wrapper around SignInForm; forwards the
+// ?callbackUrl= query param through so post-login redirect works.
 import { getTranslations } from "next-intl/server";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";

@@ -1,5 +1,9 @@
 "use client";
 
+// Wizard step 2 of 10: name/location/sports/slug — the fields that, on
+// first submit, actually create the draft organization row (see
+// CreateOrganizationWizard's persistStep, case 2). The slug auto-derives
+// from the name until the user edits it directly (slugTouched).
 import { useTranslations } from "next-intl";
 import { slugify } from "@/lib/slug";
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS, SPORTS_OPTIONS, type StepProps } from "./types";

@@ -1,3 +1,5 @@
+// Thin per-doc wrapper: content lives in content/legal/terms.ts, rendering
+// via the shared LegalPage component. Same pattern in every legal/*/page.tsx.
 import LegalPage from "@/components/legal/LegalPage";
 import terms from "@/content/legal/terms";
 

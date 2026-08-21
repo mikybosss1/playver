@@ -1,5 +1,9 @@
 "use client";
 
+// Accept button for the org-staff invitation link (see
+// organizer-people.ts's createInvitation/acceptOrganizationInvitation — a
+// 7-day-expiry token). email_mismatch means the invite's target email
+// doesn't match the signed-in user's account.
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";

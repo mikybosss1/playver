@@ -1,5 +1,7 @@
 "use client";
 
+// Wizard step 4 of 10: mission/vision/history and free-text org details
+// (values/affiliations are stored as comma-separated input, split on save).
 import { useTranslations } from "next-intl";
 import type { StepProps } from "./types";
 

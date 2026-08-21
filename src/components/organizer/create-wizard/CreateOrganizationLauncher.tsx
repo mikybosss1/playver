@@ -1,5 +1,9 @@
 "use client";
 
+// Entry point for creating an org: caller supplies its own `trigger` button
+// (render-prop, so this can be embedded anywhere — sidebar, top nav, empty
+// state). On open, checks for existing unpublished drafts and offers to
+// resume one before falling through to a fresh CreateOrganizationWizard.
 import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";

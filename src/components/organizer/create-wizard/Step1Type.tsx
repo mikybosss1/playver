@@ -1,5 +1,7 @@
 "use client";
 
+// Wizard step 1 of 10: pick the organization type. See types.ts for the
+// shared WizardState/StepProps shape every step follows.
 import { useTranslations } from "next-intl";
 import type { StepProps } from "./types";
 

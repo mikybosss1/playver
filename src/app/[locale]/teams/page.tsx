@@ -1,3 +1,5 @@
+// Public /teams browse page — fetches all standalone teams + (if signed in)
+// which ones the user belongs to, renders via the client-side TeamsGrid.
 import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 import Navbar from "@/components/layout/Navbar";

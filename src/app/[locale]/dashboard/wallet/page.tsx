@@ -1,3 +1,7 @@
+// /dashboard/wallet: athlete wallet balance/transactions. `deposit`/
+// `connect` query params are set by Stripe redirecting back here after a
+// checkout or Connect-onboarding round trip, read by WalletClient to show
+// the right success state.
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";

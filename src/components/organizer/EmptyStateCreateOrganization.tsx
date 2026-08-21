@@ -1,5 +1,8 @@
 "use client";
 
+// Shown by organizer/layout.tsx when the signed-in user has no active
+// organization yet — launches the create-org wizard and, on success, sets
+// the new org active and refreshes so the layout re-renders with real chrome.
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { setActiveOrganization } from "@/app/actions/organization";

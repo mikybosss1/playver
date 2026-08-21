@@ -1,5 +1,9 @@
 "use client";
 
+// Score + (sport-permitting) per-player box-score entry form for a
+// completed game. The box-score rows only render when
+// sportTracksBoxScore(sport) is true; otherwise this is just a final-score
+// form. Read-only counterpart is GameStatsModal.
 import { useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import type { GameDetail, PlayerBoxScore } from "@/app/actions/game";

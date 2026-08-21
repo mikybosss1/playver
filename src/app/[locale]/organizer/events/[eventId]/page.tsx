@@ -1,3 +1,6 @@
+// Organizer-console event management page for one event: edit form +
+// cancel/postpone. Only reachable for org-owned events with MANAGE_EVENTS —
+// legacy events are managed from the public /events/[eventId]/edit instead.
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";

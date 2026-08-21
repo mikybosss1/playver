@@ -1,5 +1,6 @@
 "use client";
 
+// Plain sign-out button, redirects to /auth/signin after.
 import { signOut } from "@/lib/auth-client";
 import { useRouter } from "@/i18n/routing";
 

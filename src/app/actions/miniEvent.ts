@@ -1,5 +1,11 @@
 "use server";
 
+// "Mini-events" — free-for-all side competitions inside a tournament that
+// aren't a team-vs-team game (e.g. a 3-point contest, a skills challenge):
+// individual players get a single score rather than a box score. Reuses
+// game.ts's assertCanManageTournament() for authorization, so the same
+// creator-or-super-admin-only gap noted there applies here too.
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";

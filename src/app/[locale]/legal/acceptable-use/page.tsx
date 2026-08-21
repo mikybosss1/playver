@@ -1,3 +1,4 @@
+// Thin per-doc wrapper — see legal/terms/page.tsx for the shared pattern.
 import LegalPage from "@/components/legal/LegalPage";
 import acceptableUse from "@/content/legal/acceptable-use";
 

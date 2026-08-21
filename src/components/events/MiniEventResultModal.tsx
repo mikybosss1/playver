@@ -1,5 +1,7 @@
 "use client";
 
+// Score-entry form for a single mini-event (one row per player/participant).
+// Read-only ranking view is the separate MiniEventResultsModal (plural).
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";

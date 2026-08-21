@@ -1,3 +1,6 @@
+// /dashboard/events: events the signed-in user created (legacy, non-org
+// events only — see event.ts's legacy-vs-org-owned distinction) plus events
+// they've joined.
 import { getTranslations } from "next-intl/server";
 import EventCard from "@/components/events/EventCard";
 import { getJoinedEvents, getMyLegacyEvents } from "@/app/actions/event";

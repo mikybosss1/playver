@@ -1,3 +1,5 @@
+// Organizer-invitation email (invite someone to join an org with a given
+// OrgRole — see src/lib/organizer-permissions.ts for the role list).
 import { resend, FROM, layout, ctaButton, detail, detailTable } from "./_shared";
 
 function formatOrgRole(role: string) {

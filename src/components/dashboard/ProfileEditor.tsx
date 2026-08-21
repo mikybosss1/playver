@@ -1,5 +1,8 @@
 "use client";
 
+// Athlete's own profile editor (/dashboard/profile): bio/sport/media
+// gallery. Backs the same `bio`/`mainSport`/user_media columns that
+// athlete.ts bolts onto the base user table — see that file's lazy-DDL note.
 import { useState, useTransition, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "@/i18n/routing";
