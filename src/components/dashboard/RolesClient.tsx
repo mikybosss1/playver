@@ -1,5 +1,8 @@
 "use client";
 
+// Super-admin user management table (site-wide user.role, not an OrgRole —
+// see admin.ts's requireSuperAdmin gate and organizer-permissions.ts for
+// the distinction).
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";

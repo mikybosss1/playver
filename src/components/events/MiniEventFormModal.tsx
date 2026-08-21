@@ -1,5 +1,8 @@
 "use client";
 
+// Create/edit form for a mini-event (schedule, title, court, notes). Passing
+// an existing `miniEvent` switches this into edit mode (updateMiniEvent
+// instead of createMiniEvent) — same component, no separate edit form.
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import type { MiniEvent } from "@/app/actions/miniEvent";

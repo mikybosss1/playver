@@ -1,5 +1,12 @@
 "use server";
 
+// Athlete profiles: the public /athletes/[userId] page (getAthleteProfile —
+// aggregates teams, events, gallery media, and game history in one call) and
+// the athlete's own dashboard profile editor (getProfileData/updateUserProfile/
+// *UserMedia). "mainSport"/"bio"/user_media are all bolted onto the base
+// Better Auth "user" table via lazy DDL below rather than a separate profile
+// table.
+
 import { headers } from "next/headers";
 import { pool } from "@/lib/db";
 import { auth } from "@/lib/auth";

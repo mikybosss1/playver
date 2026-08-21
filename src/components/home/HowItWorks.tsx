@@ -1,3 +1,5 @@
+// Static 3-step "how it works" section on the public homepage; all copy
+// comes from the HowItWorks i18n namespace, no data fetching.
 import { getTranslations } from "next-intl/server";
 
 export default async function HowItWorks() {

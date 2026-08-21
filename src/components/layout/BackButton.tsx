@@ -1,5 +1,8 @@
 "use client";
 
+// Generic "back" link: uses browser history when there's somewhere to go
+// back to, otherwise falls back to a fixed href (e.g. when the page was
+// opened directly / in a new tab, where history.length is 1).
 import { useRouter } from "next/navigation";
 
 export default function BackButton({ label, fallbackHref }: { label: string; fallbackHref: string }) {

@@ -1,5 +1,8 @@
 "use client";
 
+// Accept a team invite code link (joinTeamViaInvite) — unlike
+// TournamentConfirmButtons' token, this path does require a signed-in
+// session, since it's adding the current user as a team member.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { joinTeamViaInvite } from "@/app/actions/tournament";

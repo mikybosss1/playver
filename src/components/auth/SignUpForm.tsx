@@ -20,6 +20,8 @@ function EyeIcon({ show }: { show: boolean }) {
   );
 }
 
+// Email/password + Google OAuth sign-up. sendWelcomeEmail() fires
+// server-side from auth.ts's databaseHooks.user.create, not from here.
 export default function SignUpForm({ callbackUrl }: { callbackUrl?: string }) {
   const t = useTranslations("SignUp");
   const router = useRouter();

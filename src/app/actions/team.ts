@@ -1,5 +1,12 @@
 "use server";
 
+// Standalone teams — a group of athletes with a captain, independent of any
+// specific event or tournament (those have their own team concepts: see
+// tournament.ts's tournament_team, which is unrelated to the "team"/"team_member"
+// tables here). No public "join" flow exists in this file; only the captain-only
+// moderation actions (leave/remove) and reads. Team creation happens via
+// createTeam, which auto-adds the creator as the first team_member row.
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";

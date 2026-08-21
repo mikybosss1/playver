@@ -1,5 +1,7 @@
 "use client";
 
+// Progress bar shown in OrganizerSidebar; `percent` comes from
+// computeCompleteness() (src/lib/organization-completeness.ts).
 import { useTranslations } from "next-intl";
 
 export default function HqCompletenessBar({ percent }: { percent: number }) {

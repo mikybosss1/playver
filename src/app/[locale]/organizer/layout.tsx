@@ -1,3 +1,10 @@
+// Auth-gated shell for the organizer console (/organizer/*). Requires a
+// session AND an active organization (via the active_org_id cookie, resolved
+// by getActiveOrganization() — see src/app/actions/organization.ts); if the
+// user has no org yet, shows an empty state with the create-org wizard
+// launcher instead of the normal chrome. Otherwise renders OrganizerTopNav +
+// OrganizerSidebar scoped to `active.role` (an OrgRole, not the site-wide
+// user.role from dashboard/layout.tsx).
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";

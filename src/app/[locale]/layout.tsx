@@ -1,3 +1,9 @@
+// Locale layout: validates the :locale segment (404s on anything not in
+// routing.locales), loads that locale's messages/*.json, and wraps every
+// page in NextIntlClientProvider so client components can call
+// useTranslations(). No nav/footer here — those are per-page or per-nested-
+// layout (dashboard/, organizer/), since the marketing pages, dashboard, and
+// organizer console each have different chrome.
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { notFound } from "next/navigation";
 import { getMessages } from "next-intl/server";

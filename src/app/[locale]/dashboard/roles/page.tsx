@@ -1,3 +1,6 @@
+// /dashboard/roles: super-admin-only user management. dashboard/layout.tsx
+// only checks for a session, not the role, so this page does its own
+// super_admin check and redirects everyone else back to /dashboard.
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";

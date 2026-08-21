@@ -1,3 +1,6 @@
+// Public homepage section showing the next 3 active/upcoming events
+// (client-side filtered/sorted from the full `events` list passed in by
+// page.tsx's getEvents() call — no separate fetch here).
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import EventCard from "@/components/events/EventCard";

@@ -1,5 +1,7 @@
 "use client";
 
+// Standalone-team creation form. `SPORT_PRESETS` supplies a default cover
+// image per sport when the creator doesn't upload their own.
 import { useState, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";

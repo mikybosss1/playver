@@ -1,3 +1,7 @@
+// Public /tournaments browse page — same DiscoverSearch component as
+// /events, pre-filtered to eventType "Tournament" server-side
+// (getTournamentEvents). Cards link straight to /events/[id]
+// (linkTo="events") rather than through the /tournaments/[id] redirect.
 import { headers } from "next/headers";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";

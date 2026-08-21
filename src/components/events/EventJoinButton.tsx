@@ -1,5 +1,11 @@
 "use client";
 
+// Join/leave control on the public event detail page. Three paths depending
+// on the event: joinEvent() for free events with no custom form,
+// joinEventWithForm() when the organizer configured custom registration
+// fields (formFields), and a Stripe/wallet payment flow (see the pay
+// handlers further down) when `price` > 0 — availableWalletCents is applied
+// as a credit before charging the card.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

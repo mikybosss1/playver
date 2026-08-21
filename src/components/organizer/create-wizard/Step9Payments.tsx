@@ -1,5 +1,8 @@
 "use client";
 
+// Wizard step 9 of 10: Stripe Connect onboarding, optional at this stage
+// (the org can publish and connect payments later from /organizer/payments
+// — see OrganizerPaymentsClient.tsx for the same onboarding-link flow).
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createOrganizationConnectOnboardingLink, getOrganizationWalletOverview } from "@/app/actions/organizer-wallet";

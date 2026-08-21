@@ -1,5 +1,9 @@
 "use client";
 
+// Client-side search/filter UI for the public /events (and /tournaments,
+// via linkTo="tournaments") list — all filtering happens in-browser over
+// the full `events` array passed in, no server round-trip per keystroke.
+// Also tracks "recently viewed" event IDs in localStorage (RECENT_KEY).
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import EventCard from "@/components/events/EventCard";

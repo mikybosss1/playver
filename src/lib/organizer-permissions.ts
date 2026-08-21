@@ -1,3 +1,7 @@
+// The org-level role/permission matrix — read this before touching any
+// organizer-scoped action file. Unrelated to the separate site-wide
+// user.role column checked in admin.ts (that's "player"/"organizer"/
+// "super_admin"; this is per-organization membership role).
 export type OrgRole =
   | "OWNER"
   | "ADMINISTRATOR"

@@ -1,5 +1,7 @@
 "use client";
 
+// Scrolls the event-detail page down to its Teams tab (#teams) — used on the
+// tournament overview so "join a team" doesn't need its own dedicated page.
 import { useTranslations } from "next-intl";
 
 export default function JoinTeamTabButton() {

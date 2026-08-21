@@ -1,5 +1,10 @@
 "use server";
 
+// An organization's staff roster and email invitations (7-day expiry, see
+// hasExpired() in src/lib/organizer-invitations.ts). Role promotion/demotion
+// goes through canAssignRole() (src/lib/organizer-permissions.ts) so a STAFF
+// member with MANAGE_PEOPLE can't grant themselves or others admin.
+
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { pool, withTransaction } from "@/lib/db";

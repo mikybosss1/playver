@@ -1,3 +1,6 @@
+// Emails sent to the player/athlete side of an event registration (join
+// confirmation, payment receipt, reminders, cancellation/postponement,
+// removal). The organizer-facing counterparts live in ./organizer.ts.
 import { resend, FROM, BASE_URL, layout, ctaButton, detail, detailTable } from "../_shared";
 
 const fmt = (iso: string) =>

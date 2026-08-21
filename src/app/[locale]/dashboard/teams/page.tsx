@@ -1,3 +1,5 @@
+// /dashboard/teams: standalone teams the user captains (getMyTeams) plus
+// ones they've joined (getJoinedTeams) — not tournament_team rosters.
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import CreateTeamButton from "@/components/teams/CreateTeamButton";

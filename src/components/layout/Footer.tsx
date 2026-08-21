@@ -1,3 +1,5 @@
+// Site footer with links to the /legal/* pages (see components/legal/
+// LegalPage.tsx for how those pages render).
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";

@@ -1,3 +1,5 @@
+// tournament_team emails: member invites, join-request notifications to the
+// captain, and team payment/registration receipts (see tournament.ts).
 import { resend, FROM, BASE_URL, layout, ctaButton, detail, detailTable } from "../_shared";
 
 const fmt = (iso: string) =>

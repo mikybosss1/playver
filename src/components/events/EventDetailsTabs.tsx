@@ -1,5 +1,12 @@
 "use client";
 
+// The tabbed body of the public event-detail page (/events/[eventId]) —
+// the biggest single component in the app. Renders a different tab set
+// depending on event type: plain events get details/participants/gallery,
+// while tournaments additionally get agenda/results/teams/standings (games
+// + mini-events management). `isOrganizer`/`isSuperAdmin` gate the
+// management controls (create/edit/delete games, enter results, remove
+// participants) inline in each tab rather than via a separate admin view.
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";

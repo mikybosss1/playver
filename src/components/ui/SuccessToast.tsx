@@ -1,5 +1,8 @@
 "use client";
 
+// Self-dismissing (3.2s) success notification. Mount with a changing `key`
+// prop (see CreateEventButton/CreateTeamButton) to retrigger it on repeat
+// actions, since remounting is what restarts the visible/timeout state.
 import { useEffect, useState } from "react";
 
 export default function SuccessToast({ message }: { message: string }) {

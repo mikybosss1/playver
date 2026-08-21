@@ -1,5 +1,10 @@
 "use client";
 
+// Top bar for every /organizer/* page (rendered by organizer/layout.tsx):
+// logo, org switcher, "new org" launcher, and the user menu. "Public View"
+// toggle and notifications are permanently disabled placeholders (not wired
+// to anything yet), matching the ComingSoonPanel pattern used elsewhere in
+// the organizer console.
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Link, useRouter } from "@/i18n/routing";

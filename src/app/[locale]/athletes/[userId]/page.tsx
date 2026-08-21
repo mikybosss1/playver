@@ -1,3 +1,6 @@
+// Public athlete profile (/athletes/[userId]): bio, sports, media gallery,
+// and game history, all fetched by getAthleteProfile() (athlete.ts). 404s
+// via notFound() if the profile doesn't resolve.
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";

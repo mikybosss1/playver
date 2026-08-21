@@ -1,5 +1,8 @@
 "use client";
 
+// Wizard step 6 of 10: legal name/registration/insurance + the three policy
+// documents (refund/privacy/code of conduct), each independently switchable
+// between "upload a file" and "write text inline" (PolicyMode).
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useUploadThing } from "@/lib/uploadthing";

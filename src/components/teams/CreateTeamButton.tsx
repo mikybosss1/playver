@@ -1,5 +1,7 @@
 "use client";
 
+// Opens CreateTeamModal for a standalone team (src/app/actions/team.ts) —
+// unrelated to tournament_team rosters under tournaments/.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

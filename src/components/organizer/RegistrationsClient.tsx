@@ -1,5 +1,9 @@
 "use client";
 
+// Organizer's per-event registrant list + CSV export. `canViewContactInfo`/
+// `canViewPayments` (from getEventRegistrants) gate which columns render —
+// VIEW_SENSITIVE_PARTICIPANT_DATA and VIEW_PAYMENTS respectively, see
+// organizer-permissions.ts.
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";

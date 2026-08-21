@@ -1,3 +1,5 @@
+// User-account-level emails (not tied to a specific event/team/tournament):
+// welcome on sign-up, and org-role-change notifications.
 import { resend, FROM, BASE_URL, layout, ctaButton, detail, detailTable } from "./_shared";
 
 // ── Welcome (new sign-up) ────────────────────────────────────────────────────

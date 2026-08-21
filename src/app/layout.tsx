@@ -1,3 +1,7 @@
+// Absolute root layout (outside the [locale] segment) — fonts, global CSS,
+// and <html>/<body>. Deliberately has no next-intl provider or nav chrome;
+// that all lives one level down in [locale]/layout.tsx, since every real
+// route is under /[locale]/.
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";

@@ -1,3 +1,5 @@
+// Lazy schema for miniEvent.ts's tables — see ARCHITECTURE.md §5 for the
+// lazy-DDL vs. migration-script split.
 import { pool } from "@/lib/db";
 
 let miniEventTablesReady: Promise<void> | null = null;

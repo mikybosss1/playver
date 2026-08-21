@@ -1,5 +1,7 @@
 "use client";
 
+// Public athlete-profile section listing past games, with a click-through
+// to the same GameStatsModal used on the event-detail page.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { AthleteGameHistoryItem } from "@/app/actions/game";

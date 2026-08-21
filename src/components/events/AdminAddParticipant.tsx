@@ -1,5 +1,8 @@
 "use client";
 
+// Super-admin tool to manually enroll a user into an event (bypasses
+// capacity/payment — see admin.ts's adminAddParticipant). Search-and-pick
+// modal over getEventNonParticipants(), which excludes users already joined.
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";

@@ -1,5 +1,8 @@
 "use client";
 
+// Email/password + Google OAuth sign-in. `callbackUrl` (from the
+// `?callbackUrl=` query param) lets a page that redirected here for auth
+// send the user back where they came from; defaults to /dashboard.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";

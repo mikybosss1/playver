@@ -1,3 +1,5 @@
+// Org-wide registrations page (/organizer/registrations): lists the org's
+// events, RegistrationsClient drills into per-event registrant lists.
 import { getTranslations } from "next-intl/server";
 import { ForbiddenError } from "@/lib/organizer-errors";
 import { getOrganizationEvents } from "@/app/actions/organizer-registrations";

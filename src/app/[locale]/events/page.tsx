@@ -1,3 +1,7 @@
+// Public /events browse page: fetches all events + (if signed in) which
+// ones the user has joined, then hands everything to the client-side
+// DiscoverSearch for filtering. `?created=event` shows a success toast
+// after CreateEventButton's form redirects back here.
 import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 import Navbar from "@/components/layout/Navbar";

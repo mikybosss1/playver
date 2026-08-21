@@ -1,3 +1,5 @@
+// /dashboard/profile: fetches the current user's own profile fields
+// (getProfileData) and hands them to the client-side ProfileEditor form.
 import { getTranslations } from "next-intl/server";
 import { getProfileData } from "@/app/actions/athlete";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";

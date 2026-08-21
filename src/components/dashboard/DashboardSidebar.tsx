@@ -1,5 +1,6 @@
 "use client";
 
+// Left nav for the athlete /dashboard/* shell (see dashboard/layout.tsx).
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { signOut } from "@/lib/auth-client";

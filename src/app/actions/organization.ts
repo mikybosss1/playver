@@ -1,5 +1,21 @@
 "use server";
 
+// Organizations: CRUD, membership/roles, and the "active organization" concept
+// every other organizer-scoped action file depends on.
+//
+// Read this file first if you're new to the organizer side of the app — the
+// `requireOrganizationPermission()` pattern defined here (resolve session ->
+// resolve active org via the ACTIVE_ORG_COOKIE, re-verified server-side ->
+// check permission, throw ForbiddenError on failure) is copy-pasted at the top
+// of nearly every mutating action in organizer-events.ts, organizer-wallet.ts,
+// organizer-people.ts, organizer-registrations.ts, etc. New organizer actions
+// should follow the same shape rather than inventing a new one.
+//
+// Also owns: the 10-step org-creation wizard's persistence (createOrganizationDraft/
+// updateOrganizationDraft/publishOrganization — see src/components/organizer/create-wizard/),
+// and org invitations (accept flow lives in getOrganizationDraftState-adjacent
+// exports below; the invite email/send flow itself is in organizer-people.ts).
+
 import { headers, cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { pool, withTransaction } from "@/lib/db";
@@ -7,6 +23,10 @@ import { slugify } from "@/lib/slug";
 import { hasPermission, type OrgRole, type OrgPermission } from "@/lib/organizer-permissions";
 import { ForbiddenError } from "@/lib/organizer-errors";
 
+// Which org a multi-org user is currently "acting as". Every read/write in this
+// file re-verifies membership against the DB before trusting this cookie value
+// — see getActiveOrganization() below — so a forged/stale cookie can only ever
+// resolve to "not a member", never to elevated access.
 const ACTIVE_ORG_COOKIE = "active_org_id";
 
 export type OrganizationSummary = {

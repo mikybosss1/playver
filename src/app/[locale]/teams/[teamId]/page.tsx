@@ -1,3 +1,8 @@
+// Public standalone-team profile page: roster, upcoming events the team is
+// in, and (for the captain) tournament registrations they can manage —
+// also surfaces tournament_team panels via TournamentCaptainPanel/
+// JoinOpenTeamButton for any tournament this team has been linked/imported
+// into (see tournament.ts's linkedTeamId).
 import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";

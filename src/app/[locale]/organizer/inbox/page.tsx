@@ -1,3 +1,5 @@
+// Not-yet-built organizer section — see communications/page.tsx for the
+// shared ComingSoonPanel pattern used by this whole group of stub pages.
 import { getTranslations } from "next-intl/server";
 import { getActiveOrganization } from "@/app/actions/organization";
 import ComingSoonPanel from "@/components/organizer/ComingSoonPanel";

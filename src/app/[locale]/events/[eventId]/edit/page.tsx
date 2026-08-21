@@ -1,3 +1,7 @@
+// Public edit page for a legacy (non-org) event — reuses CreateEventForm in
+// edit mode via `eventId`. Org-owned events are edited from
+// /organizer/events/[eventId] instead (OrganizerEventEditForm), which stays
+// inside the organizer console chrome.
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";

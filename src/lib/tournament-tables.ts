@@ -1,3 +1,6 @@
+// Lazy schema: these tables self-create on first use rather than requiring a
+// migration script to have run in every environment. See ARCHITECTURE.md §5
+// for when to use this pattern vs. a scripts/migrate-*.mjs file.
 import { pool } from "@/lib/db";
 
 let tournamentTablesReady: Promise<void> | null = null;

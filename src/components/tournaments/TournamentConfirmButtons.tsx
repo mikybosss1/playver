@@ -1,5 +1,8 @@
 "use client";
 
+// Confirm/decline buttons for the emailed tournament_team_member invite
+// link (token-based, no login required — see tournament.ts's
+// confirmationToken flow).
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { confirmTournamentMembership, declineTournamentMembership } from "@/app/actions/tournament";

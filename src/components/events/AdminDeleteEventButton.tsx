@@ -1,5 +1,8 @@
 "use client";
 
+// Super-admin-only permanent delete (adminDeleteEvent, gated by
+// requireSuperAdmin() — see admin.ts). Distinct from the organizer-facing
+// EventCancelPostponeButton, which cancels/postpones instead of deleting.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adminDeleteEvent } from "@/app/actions/admin";

@@ -1,3 +1,7 @@
+// Landing page for an org-staff invitation email link (/invite/[token]).
+// Looks up the invite server-side to show who's inviting and to what org
+// before the user commits to accepting (InviteAcceptClient does the actual
+// accept action) — also prompts sign-in/sign-up first if not authenticated.
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";

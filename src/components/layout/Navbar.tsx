@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
 import LanguageToggle from "@/components/layout/LanguageToggle";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
+// Site-wide top nav, rendered on nearly every page. Renders MobileBottomNav
+// for small screens.
 import { useSession, signOut } from "@/lib/auth-client";
 
 const navHrefs = ["/tournaments", "/events", "/teams"] as const;

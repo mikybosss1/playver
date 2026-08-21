@@ -1,5 +1,9 @@
 "use client";
 
+// Left nav for /organizer/*. `role` (an OrgRole) is only used to render the
+// role badge here — actual permission gating happens per-page/per-action via
+// requireOrganizationPermission(), not by hiding sidebar links; a page the
+// role can't use will 404 or show ForbiddenError when actually visited.
 import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";

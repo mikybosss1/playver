@@ -1,5 +1,8 @@
 "use client";
 
+// Athlete wallet page (/dashboard/wallet) — the player-side twin of
+// OrganizerPaymentsClient.tsx. `overview.availableBalance` already excludes
+// the withdrawal hold; see wallet.ts's duplicated-constants note.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

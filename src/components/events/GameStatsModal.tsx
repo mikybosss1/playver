@@ -1,5 +1,9 @@
 "use client";
 
+// Read-only box-score modal for a completed game. Only rendered when
+// sportTracksBoxScore(sport) is true (Basketball today — see
+// src/lib/game-sports.ts) since other sports only have a final score, no
+// per-player stats.
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import type { PlayerBoxScore } from "@/app/actions/game";

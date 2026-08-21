@@ -1,5 +1,13 @@
 "use server";
 
+// An individual athlete's personal wallet: balance, Stripe Connect payout
+// onboarding, and withdrawals. This is the personal-wallet twin of
+// organizer-wallet.ts (org-owned events credit that file's wallet instead —
+// see event.ts's payment-completion functions for how that branch is chosen).
+// MIN_WITHDRAWAL_CENTS/WITHDRAWAL_HOLD_HOURS/InsufficientFundsError are
+// duplicated in organizer-wallet.ts rather than shared — known debt, keep
+// both in sync if you change the rule.
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";

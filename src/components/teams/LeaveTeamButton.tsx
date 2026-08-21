@@ -1,5 +1,7 @@
 "use client";
 
+// Self-service leave for a standalone team member. Note: leaveTeam() in
+// team.ts has no special-case for the captain leaving their own team.
 import { useState, useTransition } from "react";
 import { leaveTeam } from "@/app/actions/team";
 import { useRouter } from "next/navigation";

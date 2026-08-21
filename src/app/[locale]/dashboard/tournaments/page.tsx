@@ -1,3 +1,5 @@
+// /dashboard/tournaments: tournaments the user created plus ones their
+// tournament_team has joined.
 import { getTranslations } from "next-intl/server";
 import EventCard from "@/components/events/EventCard";
 import { getMyTournaments, getJoinedTournaments } from "@/app/actions/event";
