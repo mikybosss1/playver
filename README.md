@@ -13,18 +13,18 @@ A sports events/tournaments platform (Next.js App Router, Neon Postgres, Better 
 
 | | Local | Staging | Production |
 |---|---|---|---|
-| URL | `localhost:3000` | `stage.playver.ca` | `playver.ca` |
+| URL | `localhost:3000` | `staging.playver.ca` | `playver.ca` |
 | Git branch | (your working branch) | `staging` | `main` |
 | Neon DB branch | your own dev branch | `staging` (empty, seeded — never cloned from prod) | `main`/production |
 | Stripe mode | test | test | live |
 | Outgoing emails | real (Resend) | guarded — logged, not sent (`EMAIL_MODE=log`) | real (Resend) |
 
-**Workflow**: feature branches merge into `staging` first so people can try the change at `stage.playver.ca`, then into `main` for production. There's no CI enforcing this — periodically fast-forward `staging` from `main` after each release so it doesn't drift far behind.
+**Workflow**: feature branches merge into `staging` first so people can try the change at `staging.playver.ca`, then into `main` for production. There's no CI enforcing this — periodically fast-forward `staging` from `main` after each release so it doesn't drift far behind.
 
 **Running staging migrations/seed** (from your machine, against the staging Neon branch — never run these against `PROD_DATABASE_URL`):
 ```bash
 STAGING_DATABASE_URL=<staging Neon connection string> npm run db:migrate:staging
-STAGING_DATABASE_URL=<staging Neon connection string> STAGING_APP_URL=https://stage.playver.ca npm run db:seed:staging
+STAGING_DATABASE_URL=<staging Neon connection string> STAGING_APP_URL=https://staging.playver.ca npm run db:seed:staging
 ```
 `db:migrate:staging` runs the existing `scripts/migrate-*.mjs` files (plus the tables that are normally created lazily at runtime) in dependency order against whatever `STAGING_DATABASE_URL` you pass — see that script's header comment for details. `db:seed:staging` then creates one test login, one organization, and one event to click around with; it prints the test login credentials at the end.
 

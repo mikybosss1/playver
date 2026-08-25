@@ -19,7 +19,7 @@ const inter = Inter({
 });
 
 // metadataBase reflects wherever this deployment is actually served
-// (playver.ca in prod, stage.playver.ca on staging, localhost in dev) —
+// (playver.ca in prod, staging.playver.ca on staging, localhost in dev) —
 // no page currently declares its own `alternates.canonical`, so nothing
 // resolves against this yet, but it's the correct base for anything that
 // does in the future (OG images, relative canonical/alternate URLs) and

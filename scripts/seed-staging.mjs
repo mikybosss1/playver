@@ -3,7 +3,7 @@
 // published organization (that user as OWNER), and one event.
 //
 // Usage:
-//   STAGING_DATABASE_URL=postgresql://... STAGING_APP_URL=https://stage.playver.ca \
+//   STAGING_DATABASE_URL=postgresql://... STAGING_APP_URL=https://staging.playver.ca \
 //     node scripts/seed-staging.mjs
 //   (or: npm run db:seed:staging)
 //
