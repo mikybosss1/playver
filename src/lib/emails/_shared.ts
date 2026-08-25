@@ -6,7 +6,22 @@
 // tournament/) each own their own copy/subject and just call these helpers.
 import { Resend } from "resend";
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+// EMAIL_MODE=log (set only in staging's Vercel env) swaps the real Resend
+// client for a no-op that logs instead of sending — so testing on staging
+// never emails real people. Every send*Email function only does
+// `await resend.emails.send(...)` and never uses the return value, so this
+// stub's shape doesn't need to match Resend's real response type exactly.
+const guarded = process.env.EMAIL_MODE === "log";
+export const resend = guarded
+  ? ({
+      emails: {
+        send: async (payload: unknown) => {
+          console.log("[EMAIL_MODE=log] would send:", payload);
+          return { data: { id: "guarded-noop" }, error: null };
+        },
+      },
+    } as unknown as Resend)
+  : new Resend(process.env.RESEND_API_KEY);
 export const FROM = "Playver <noreply@playver.ca>";
 export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://playver.ca";
 

@@ -16,6 +16,7 @@ export const auth = betterAuth({
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
     "https://playver.ca",
     "https://www.playver.ca",
+    "https://stage.playver.ca",
     "http://localhost:3000",
     "http://localhost:3001",
   ].filter((v): v is string => Boolean(v)),
