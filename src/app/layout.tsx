@@ -4,6 +4,7 @@
 // route is under /[locale]/.
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
+import { isIndexable } from "@/lib/env";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -17,9 +18,23 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+// metadataBase reflects wherever this deployment is actually served
+// (playver.ca in prod, stage.playver.ca on staging, localhost in dev) —
+// no page currently declares its own `alternates.canonical`, so nothing
+// resolves against this yet, but it's the correct base for anything that
+// does in the future (OG images, relative canonical/alternate URLs) and
+// ensures none of it can ever resolve to the wrong environment's domain.
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "https://playver.ca"),
   title: "Playver — Find Your Next Game",
   description: "Discover local sports games, connect with players in your area, and level up your game.",
+  // The actual indexing switch: only the real production deployment is
+  // index/follow. Staging and every Vercel Preview default to
+  // noindex/nofollow via isIndexable() (src/lib/env.ts) — applies
+  // site-wide since no page overrides `robots` in its own metadata.
+  robots: isIndexable()
+    ? { index: true, follow: true }
+    : { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
