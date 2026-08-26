@@ -30,7 +30,9 @@ const TEST_NAME = "Staging Test User";
 console.log(`\nSigning up ${TEST_EMAIL} on ${STAGING_APP_URL}...`);
 const signUpRes = await fetch(`${STAGING_APP_URL}/api/auth/sign-up/email`, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  // Better Auth rejects sign-up requests with no Origin header (CSRF
+  // protection) — must match an entry in trustedOrigins (src/lib/auth.ts).
+  headers: { "Content-Type": "application/json", Origin: STAGING_APP_URL },
   body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD, name: TEST_NAME }),
 });
 if (!signUpRes.ok) {
