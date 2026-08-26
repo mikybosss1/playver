@@ -15,18 +15,20 @@ A sports events/tournaments platform (Next.js App Router, Neon Postgres, Better 
 |---|---|---|---|
 | URL | `localhost:3000` | `staging.playver.ca` | `playver.ca` |
 | Git branch | (your working branch) | `staging` | `main` |
-| Neon DB branch | your own dev branch | `staging` (empty, seeded — never cloned from prod) | `main`/production |
+| Neon DB branch | your own dev branch | `staging` (empty, seeded — not a clone of prod) | `main`/production |
 | Stripe mode | test | test | live |
 | Outgoing emails | real (Resend) | guarded — logged, not sent (`EMAIL_MODE=log`) | real (Resend) |
 
 **Workflow**: feature branches merge into `staging` first so people can try the change at `staging.playver.ca`, then into `main` for production. There's no CI enforcing this — periodically fast-forward `staging` from `main` after each release so it doesn't drift far behind.
 
-**Running staging migrations/seed** (from your machine, against the staging Neon branch — never run these against `PROD_DATABASE_URL`):
+**Staging DB is deliberately empty, not a clone of prod** — no real user PII or payment/wallet records live there, so testing can't leak real data or accidentally act on it. If the staging Neon branch is ever re-created from prod (branching there always copies data — see the branch's own history for the exact procedure), wipe it immediately with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before doing anything else.
+
+**Rebuilding schema + seeding a known test login** (from your machine, against the staging Neon branch — never run these against `PROD_DATABASE_URL`):
 ```bash
 STAGING_DATABASE_URL=<staging Neon connection string> npm run db:migrate:staging
 STAGING_DATABASE_URL=<staging Neon connection string> STAGING_APP_URL=https://staging.playver.ca npm run db:seed:staging
 ```
-`db:migrate:staging` runs the existing `scripts/migrate-*.mjs` files (plus the tables that are normally created lazily at runtime) in dependency order against whatever `STAGING_DATABASE_URL` you pass — see that script's header comment for details. `db:seed:staging` then creates one test login, one organization, and one event to click around with; it prints the test login credentials at the end.
+`db:migrate:staging` runs the existing `scripts/migrate-*.mjs` files (plus the tables normally created lazily at runtime) against a genuinely empty DB — see that script's header comment for details. `db:seed:staging` then creates one test login, one organization, and one event to click around with; it prints the test login credentials at the end.
 
 ## Learn More
 
