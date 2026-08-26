@@ -88,7 +88,11 @@ async function run(label, url) {
     DO $$ BEGIN
       ALTER TABLE "organization_membership"
         ADD CONSTRAINT "organization_membership_org_user_key" UNIQUE ("organizationId", "userId");
-    EXCEPTION WHEN duplicate_object THEN null; END $$;
+    -- A UNIQUE constraint implicitly creates a backing index, so re-running
+    -- this against a DB where it already exists can raise duplicate_table
+    -- (42P07, "relation already exists") instead of duplicate_object
+    -- (42710) — catch both to stay idempotent on a re-run.
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$;
   `);
   console.log(`[${label}] ✓ organization_membership`);
 

@@ -45,9 +45,12 @@ const MIGRATION_SCRIPTS = [
   "migrate-organization-invitations.mjs",
   "migrate-organization-onboarding.mjs",
   "migrate-event-organization.mjs",
-  "migrate-event-payment-stripe-direct.mjs",
   "__inject_lazy_tables__",
   "migrate-wallet.mjs",
+  // Depends on migrate-wallet.mjs having already added event_payment.method
+  // (this script only widens that column's CHECK constraint to also allow
+  // 'stripe_direct') — must run after it, not before.
+  "migrate-event-payment-stripe-direct.mjs",
   "migrate-event-status.mjs",
   "migrate-organization-wallet.mjs",
 ];
@@ -80,7 +83,7 @@ const LAZY_TABLES_SQL = [
   )`,
   `DO $$ BEGIN
      ALTER TABLE "tournament_team_member" ADD CONSTRAINT "tournament_team_member_teamId_userId_key" UNIQUE ("teamId", "userId");
-   EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+   EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$;`,
   `CREATE TABLE IF NOT EXISTS "tournament_join_request" (
     "id"        text PRIMARY KEY,
     "teamId"    text NOT NULL REFERENCES "tournament_team"("id") ON DELETE CASCADE,
@@ -90,7 +93,7 @@ const LAZY_TABLES_SQL = [
   )`,
   `DO $$ BEGIN
      ALTER TABLE "tournament_join_request" ADD CONSTRAINT "tournament_join_request_teamId_userId_key" UNIQUE ("teamId", "userId");
-   EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+   EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$;`,
   `CREATE TABLE IF NOT EXISTS "game" (
     "id"            text PRIMARY KEY,
     "tournamentId"  text NOT NULL REFERENCES "event"("id") ON DELETE CASCADE,
@@ -119,7 +122,7 @@ const LAZY_TABLES_SQL = [
   )`,
   `DO $$ BEGIN
      ALTER TABLE "game_player_stat" ADD CONSTRAINT "game_player_stat_gameId_userId_key" UNIQUE ("gameId", "userId");
-   EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+   EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$;`,
   `CREATE INDEX IF NOT EXISTS "game_tournamentId_idx" ON "game" ("tournamentId")`,
   `CREATE INDEX IF NOT EXISTS "game_player_stat_userId_idx" ON "game_player_stat" ("userId")`,
   `CREATE TABLE IF NOT EXISTS "mini_event" (
@@ -141,7 +144,7 @@ const LAZY_TABLES_SQL = [
   )`,
   `DO $$ BEGIN
      ALTER TABLE "mini_event_result" ADD CONSTRAINT "mini_event_result_miniEventId_userId_key" UNIQUE ("miniEventId", "userId");
-   EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+   EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$;`,
   `CREATE INDEX IF NOT EXISTS "mini_event_tournamentId_idx" ON "mini_event" ("tournamentId")`,
 ];
 
