@@ -21,7 +21,13 @@ export const resend = guarded
         },
       },
     } as unknown as Resend)
-  : new Resend(process.env.RESEND_API_KEY);
+  : // Falls back to an obviously-fake key rather than leaving it undefined —
+    // Resend's constructor throws on a missing key, and this module is
+    // imported by routes pulled into every Vercel build's page-data-
+    // collection step, so that throw would fail the entire build on any
+    // deployment without RESEND_API_KEY set (see the analogous fix in
+    // src/lib/stripe.ts for the same reasoning).
+    new Resend(process.env.RESEND_API_KEY || "re_not_configured");
 export const FROM = "Playver <noreply@playver.ca>";
 export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://playver.ca";
 
