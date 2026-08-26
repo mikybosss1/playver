@@ -4,13 +4,13 @@
 // tournament_team ("new" mode) or bring in one of the player's existing
 // standalone teams ("existing" mode, via importExistingTeamForTournament —
 // see tournament-tables.ts's isImportedTeam/linkedTeamId columns). Paid
-// tournaments settle via payForTeamWithWallet, mirroring EventJoinButton's
-// wallet-credit-then-charge pattern.
+// tournaments always redirect to a real Stripe Checkout session
+// (/api/stripe/team-checkout) — any wallet credit is applied as a discount
+// on that page, but payment never completes silently via wallet alone.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { createTournamentTeam, importExistingTeamForTournament, payForTeamWithWallet } from "@/app/actions/tournament";
+import { createTournamentTeam, importExistingTeamForTournament } from "@/app/actions/tournament";
 import type { MyTeamOption } from "@/app/actions/tournament";
 
 type Mode = "new" | "existing";
@@ -36,7 +36,6 @@ export default function TournamentRegisterButton({
   const [isPending, startTransition] = useTransition();
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
-  const [insufficientFunds, setInsufficientFunds] = useState(false);
   const router = useRouter();
 
   const max = maxPlayersPerTeam ?? 20;
@@ -60,18 +59,26 @@ export default function TournamentRegisterButton({
     }
   }
 
-  async function payFromWallet(teamId: string) {
+  async function payViaCheckout(teamId: string) {
     setPaymentLoading(true);
     setPaymentError("");
-    setInsufficientFunds(false);
-    const result = await payForTeamWithWallet(teamId);
-    if (result.error) {
-      setPaymentError(result.error);
-      setInsufficientFunds(result.error === "Insufficient wallet balance");
-    } else {
-      router.refresh();
+    try {
+      const res = await fetch("/api/stripe/team-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setPaymentError(data.error ?? t("registrationError"));
+        setPaymentLoading(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setPaymentError(t("registrationError"));
+      setPaymentLoading(false);
     }
-    setPaymentLoading(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -91,7 +98,7 @@ export default function TournamentRegisterButton({
       setShowModal(false);
 
       if (price > 0 && result.teamId) {
-        await payFromWallet(result.teamId);
+        await payViaCheckout(result.teamId);
         return;
       }
 
@@ -110,17 +117,7 @@ export default function TournamentRegisterButton({
         {paymentLoading ? t("redirecting") : t("registerButton")}
       </button>
       {paymentError && (
-        <p className="mt-2 text-xs font-semibold text-red-600 text-center">
-          {paymentError}
-          {insufficientFunds && (
-            <>
-              {" — "}
-              <Link href="/dashboard/wallet" className="underline">
-                {t("addFundsLink")}
-              </Link>
-            </>
-          )}
-        </p>
+        <p className="mt-2 text-xs font-semibold text-red-600 text-center">{paymentError}</p>
       )}
 
       {showModal && (

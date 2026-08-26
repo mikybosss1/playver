@@ -5,6 +5,7 @@ import { stripe } from "@/lib/stripe";
 import { pool, withTransaction } from "@/lib/db";
 import { resend, FROM, layout } from "@/lib/emails/_shared";
 import { completeEventStripePayment } from "@/app/actions/event";
+import { completeTeamStripePayment } from "@/app/actions/tournament";
 
 async function handleWalletTopup(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
@@ -73,6 +74,16 @@ async function handleEventPayment(session: Stripe.Checkout.Session) {
   await completeEventStripePayment(eventId, userId, remainderCents, walletCreditCents, session.id);
 }
 
+async function handleTeamPayment(session: Stripe.Checkout.Session) {
+  const teamId = session.metadata?.teamId;
+  const userId = session.metadata?.userId;
+  const remainderCents = session.amount_total;
+  const walletCreditCents = Number(session.metadata?.walletCreditCents ?? "0");
+  if (!teamId || !userId || !remainderCents) return;
+
+  await completeTeamStripePayment(teamId, userId, remainderCents, walletCreditCents, session.id);
+}
+
 async function handlePlatformEvent(event: Stripe.Event) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
@@ -80,6 +91,8 @@ async function handlePlatformEvent(event: Stripe.Event) {
       await handleWalletTopup(session);
     } else if (session.metadata?.type === "event_payment") {
       await handleEventPayment(session);
+    } else if (session.metadata?.type === "team_payment") {
+      await handleTeamPayment(session);
     }
     return;
   }
