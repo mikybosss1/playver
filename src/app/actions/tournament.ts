@@ -32,6 +32,7 @@ import {
   sendTournamentTeamRegisteredEmail,
   sendTournamentTeamPaymentReceiptEmail,
 } from "@/lib/emails";
+import { resend, FROM, layout, ctaButton, BASE_URL } from "@/lib/emails/_shared";
 import { ensureTournamentTables } from "@/lib/tournament-tables";
 import { assertCanManageTournament } from "@/app/actions/game";
 
@@ -1092,4 +1093,156 @@ export async function payForTeamWithWallet(teamId: string): Promise<{ error?: st
     console.error("[payForTeamWithWallet]", e);
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
+}
+
+async function notifyAdminsOfTeamPaymentIssue(
+  tournamentTitle: string,
+  tournamentId: string,
+  failures: { payerName: string | null; amountCents: number; reason: string }[]
+) {
+  const admins = await pool.query(`SELECT email FROM "user" WHERE role = 'super_admin' AND email IS NOT NULL`);
+  if (admins.rows.length === 0) return;
+
+  const failureRows = failures
+    .map(
+      (f) =>
+        `<li>${f.payerName ?? "Unknown"} — ${f.amountCents > 0 ? `${(f.amountCents / 100).toFixed(2)} CAD — ` : ""}${f.reason}</li>`
+    )
+    .join("");
+
+  const html = layout(`
+    <p style="margin:0 0 6px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#e21d12;">Team payment needs review</p>
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:900;color:#18181b;">A team payment for "${tournamentTitle}" needs manual review</h1>
+    <ul style="font-size:14px;color:#52525b;line-height:1.8;">${failureRows}</ul>
+    <center>${ctaButton(`${BASE_URL}/events/${tournamentId}`, "View tournament →")}</center>
+  `);
+
+  await Promise.all(
+    admins.rows.map((row: { email: string }) =>
+      resend.emails
+        .send({ from: FROM, to: row.email, subject: `Action needed: team payment for "${tournamentTitle}"`, html })
+        .catch(() => {})
+    )
+  );
+}
+
+// Stripe-checkout counterpart to payForTeamWithWallet — called from the
+// webhook (src/app/api/stripe/webhook/route.ts) after a successful
+// checkout.session.completed for metadata.type === "team_payment". Mirrors
+// event.ts's completeEventStripePayment: wallet credit (if any) is applied
+// best-effort since nothing was reserved up front, and any shortfall or an
+// invalid tournament (cancelled/ended mid-checkout) is flagged for manual
+// review rather than silently eating the gap — the card was already charged
+// by the time this fires, so the money has to land somewhere accounted-for.
+export async function completeTeamStripePayment(
+  teamId: string,
+  payerId: string,
+  remainderCents: number,
+  walletCreditCents: number,
+  stripeSessionId: string
+): Promise<void> {
+  await ensureTournamentTables();
+
+  const result = await pool.query(
+    `SELECT tt.id, tt.name, e.title, e.sport, e.location, e."organizerId", e.id as "tournamentId",
+            e."startDateTime", e."endDateTime", e.status as "tournamentStatus"
+     FROM "tournament_team" tt
+     JOIN "event" e ON e.id = tt."tournamentId"
+     WHERE tt.id = $1`,
+    [teamId]
+  );
+  const team = result.rows[0];
+  if (!team) return;
+  const organizerId = team.organizerId as string;
+  const priceCents = remainderCents + walletCreditCents;
+  const tournamentInvalid = team.tournamentStatus === "cancelled" || new Date(team.endDateTime) < new Date();
+
+  let alreadyProcessed = false;
+  let creditShortfallCents = 0;
+  await withTransaction(async (client) => {
+    // Idempotency gate: a Stripe webhook can be delivered more than once for
+    // the same checkout session, and must never double-credit the organizer.
+    // Reuses the same pending->active transition payForTeamWithWallet uses —
+    // once a team is active, re-running this is a no-op.
+    const activateRes = await client.query(
+      `UPDATE "tournament_team" SET status = 'active', "paymentDeadline" = NULL
+       WHERE id = $1 AND status = 'pending' RETURNING "tournamentId"`,
+      [teamId]
+    );
+    if (activateRes.rowCount === 0) {
+      alreadyProcessed = true;
+      return;
+    }
+
+    await client.query(
+      `INSERT INTO "tournament_team_payment" (id, "teamId", "userId", amount) VALUES ($1, $2, $3, $4)
+       ON CONFLICT ("teamId") DO NOTHING`,
+      [crypto.randomUUID(), teamId, payerId, priceCents]
+    );
+
+    let creditApplied = 0;
+    if (walletCreditCents > 0) {
+      const debit = await client.query(
+        `UPDATE "user" SET "walletBalance" = "walletBalance" - $1 WHERE id = $2 AND "walletBalance" >= $1 RETURNING "walletBalance"`,
+        [walletCreditCents, payerId]
+      );
+      if (debit.rowCount && debit.rowCount > 0) {
+        creditApplied = walletCreditCents;
+        await client.query(
+          `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "teamId")
+           VALUES ($1, $2, 'event_payment_sent', $3, $4, $5)`,
+          [crypto.randomUUID(), payerId, -walletCreditCents, debit.rows[0].walletBalance, teamId]
+        );
+      } else {
+        creditShortfallCents = walletCreditCents;
+      }
+    }
+
+    const organizerCreditCents = remainderCents + creditApplied;
+    const organizerBalanceRes = await client.query(
+      `UPDATE "user" SET "walletBalance" = "walletBalance" + $1 WHERE id = $2 RETURNING "walletBalance"`,
+      [organizerCreditCents, organizerId]
+    );
+    await client.query(
+      `INSERT INTO "wallet_transaction" (id, "userId", type, amount, "balanceAfter", "teamId", "stripeSessionId")
+       VALUES ($1, $2, 'event_payment_received', $3, $4, $5, $6)`,
+      [crypto.randomUUID(), organizerId, organizerCreditCents, organizerBalanceRes.rows[0].walletBalance, teamId, stripeSessionId]
+    );
+  });
+
+  if (alreadyProcessed) return;
+
+  if (tournamentInvalid || creditShortfallCents > 0) {
+    const payerRow = await pool.query(`SELECT name FROM "user" WHERE id = $1`, [payerId]);
+    const reasons: string[] = [];
+    if (team.tournamentStatus === "cancelled") reasons.push("paid via Stripe after the tournament was cancelled");
+    else if (tournamentInvalid) reasons.push("paid via Stripe after the tournament had already ended");
+    if (creditShortfallCents > 0) {
+      reasons.push(
+        `wallet credit of $${(creditShortfallCents / 100).toFixed(2)} could not be applied (balance changed before checkout completed) — organizer was credited $${(creditShortfallCents / 100).toFixed(2)} short`
+      );
+    }
+    notifyAdminsOfTeamPaymentIssue(team.title, team.tournamentId, [
+      { payerName: payerRow.rows[0]?.name ?? null, amountCents: priceCents, reason: reasons.join("; ") + " — needs manual review" },
+    ]).catch(() => {});
+  } else {
+    const captainRow = await pool.query(`SELECT name, email FROM "user" WHERE id = $1`, [payerId]);
+    const captain = captainRow.rows[0];
+    if (captain?.email) {
+      sendTournamentTeamPaymentReceiptEmail(captain.email, {
+        captainName: captain.name ?? "Captain",
+        teamName: team.name,
+        tournamentTitle: team.title,
+        sport: team.sport,
+        location: team.location,
+        startDateTime: new Date(team.startDateTime).toISOString(),
+        tournamentId: team.tournamentId,
+        amountCents: priceCents,
+        currency: "cad",
+      }).catch(() => {});
+    }
+  }
+
+  revalidatePath(`/events/${team.tournamentId}`);
+  revalidatePath("/dashboard/tournaments");
 }

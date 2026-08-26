@@ -365,12 +365,12 @@
     "requestSent": "Request sent",
     "cancelRequest": "Cancel",
     "requestToJoin": "Request to Join",
-    "addFundsLink": "Add funds to your wallet"
+    "paymentError": "Payment failed. Please try again."
   },
   "TournamentRegister": {
     "registerButton": "Register Your Team",
     "redirecting": "Processing payment...",
-    "addFundsLink": "Add funds to your wallet",
+    "registrationError": "Failed to register. Please try again.",
     "modalTitle": "Register Your Team",
     "modalSubtitle": "Create or import a team to compete",
     "tabNew": "New team",

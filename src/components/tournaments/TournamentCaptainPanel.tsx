@@ -8,7 +8,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import {
   toggleTeamRecruitment,
@@ -19,7 +18,6 @@ import {
   disbandTournamentTeam,
   requestToJoinTeam,
   renameTournamentTeam,
-  payForTeamWithWallet,
 } from "@/app/actions/tournament";
 import type { TournamentTeam, TournamentJoinRequest } from "@/app/actions/tournament";
 
@@ -52,7 +50,6 @@ export function TournamentCaptainPanel({
   const [copiedLink, setCopiedLink] = useState(false);
   const [error, setError] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [insufficientFunds, setInsufficientFunds] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(team.name);
 
@@ -72,15 +69,23 @@ export function TournamentCaptainPanel({
   async function handlePay() {
     setPaymentLoading(true);
     setError("");
-    setInsufficientFunds(false);
-    const result = await payForTeamWithWallet(team.id);
-    if (result.error) {
-      setError(result.error);
-      setInsufficientFunds(result.error === "Insufficient wallet balance");
-    } else {
-      router.refresh();
+    try {
+      const res = await fetch("/api/stripe/team-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: team.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setError(data.error ?? t("paymentError"));
+        setPaymentLoading(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError(t("paymentError"));
+      setPaymentLoading(false);
     }
-    setPaymentLoading(false);
   }
   const router = useRouter();
 
@@ -164,11 +169,6 @@ export function TournamentCaptainPanel({
           </button>
         </div>
       </div>
-      {insufficientFunds && (
-        <p className="text-xs font-semibold text-red-600">
-          {error} — <Link href="/dashboard/wallet" className="underline">{t("addFundsLink")}</Link>
-        </p>
-      )}
 
       {/* Stacked sections — this panel only ever renders inside a narrow sidebar */}
       <div className="flex flex-col gap-4">
