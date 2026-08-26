@@ -3,11 +3,12 @@
 // redirect middleware (e.g. "/" -> "/en" or "/fr" based on the visitor's
 // Accept-Language / cookie); (2) on staging only (APP_ENV=staging), an
 // HTTP Basic Auth gate — noindex/robots.txt (src/lib/env.ts) only stops
-// search engines, not people who have the URL, and staging can hold real
-// cloned user data (see README). The matcher excludes _next, /api, and
-// any path with a file extension, so API routes — including the Stripe
-// webhook, which can't answer a login prompt — and static assets skip
-// both middlewares entirely.
+// search engines, not people who have the URL, so this is the actual
+// access control keeping staging from being wide open to anyone who
+// finds it. The matcher excludes _next, /api, and any path with a file
+// extension, so API routes — including the Stripe webhook, which can't
+// answer a login prompt — and static assets skip both middlewares
+// entirely.
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
