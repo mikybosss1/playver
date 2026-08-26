@@ -124,10 +124,25 @@ export async function POST(request: Request) {
 
   if (!sig) return NextResponse.json({ error: "No signature" }, { status: 400 });
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch {
+  // Two separate Stripe webhook destinations point at this same URL — one
+  // for platform ("Your account") events, one for Connect ("Connected
+  // accounts") events — and Stripe signs each with its own secret. Try
+  // both; exactly one will verify for any given request.
+  const secrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_WEBHOOK_SECRET_CONNECT].filter(
+    (s): s is string => Boolean(s)
+  );
+
+  let event: Stripe.Event | undefined;
+  for (const secret of secrets) {
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, secret);
+      break;
+    } catch {
+      // Try the next secret — a signature mismatch here just means this
+      // wasn't the destination that sent it, not necessarily a forged request.
+    }
+  }
+  if (!event) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
