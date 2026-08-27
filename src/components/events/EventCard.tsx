@@ -1,9 +1,10 @@
 "use client";
 
-// Reusable event-grid card (used on the public /events list and the
-// homepage's UpcomingEvents section). Purely presentational — all label
-// strings (free/ended/joined/organizer) are passed in by the caller so this
-// component doesn't own an i18n namespace of its own.
+// Reusable event-grid card (used on the public /events list, the athlete
+// profile page, dashboard/organizer event lists, and more). Purely
+// presentational — all label strings (free/ended/joined/organizer) are
+// passed in by the caller so this component doesn't own an i18n namespace
+// of its own.
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import type { EventItem } from "@/app/actions/event";
