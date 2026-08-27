@@ -10,12 +10,11 @@ import MobileBottomNav from "@/components/layout/MobileBottomNav";
 // for small screens.
 import { useSession, signOut } from "@/lib/auth-client";
 
-const navHrefs = ["/tournaments", "/events", "/teams"] as const;
-
 export default function Navbar() {
   const t = useTranslations("Navbar");
   const pathname = usePathname();
   const { data: session } = useSession();
+  const isLoggedIn = Boolean(session);
   const firstName = session?.user?.name?.split(" ")[0] ?? null;
   const [menuOpen, setMenuOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -52,9 +51,8 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { href: navHrefs[0], label: t("tournaments") },
-    { href: navHrefs[1], label: t("discover") },
-    { href: navHrefs[2], label: t("teams") },
+    ...(isLoggedIn ? [{ href: "/tournaments" as const, label: t("tournaments") }] : []),
+    { href: "/events" as const, label: t("discover") },
   ];
 
   return (

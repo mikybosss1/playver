@@ -11,7 +11,7 @@ import { signIn } from "@/lib/auth-client";
 export default function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   const t = useTranslations("SignIn");
   const router = useRouter();
-  const destination = callbackUrl ?? "/dashboard";
+  const destination = callbackUrl ?? "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

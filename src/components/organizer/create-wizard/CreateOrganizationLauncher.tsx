@@ -5,6 +5,7 @@
 // state). On open, checks for existing unpublished drafts and offers to
 // resume one before falling through to a fresh CreateOrganizationWizard.
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
@@ -62,7 +63,7 @@ export default function CreateOrganizationLauncher({
     <>
       {trigger(open)}
 
-      {mode.view === "choosing" && (
+      {mode.view === "choosing" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto">
@@ -111,7 +112,8 @@ export default function CreateOrganizationLauncher({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {mode.view === "wizard" && (
