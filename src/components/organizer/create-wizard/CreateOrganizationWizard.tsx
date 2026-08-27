@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   createOrganizationDraft,
@@ -262,7 +263,7 @@ export default function CreateOrganizationWizard({
 
   const StepComponent = [Step1Type, Step2Identity, Step3Branding, Step4About, Step5Contact, Step6Legal, Step7Modules, Step8Admins, Step9Payments][currentStep - 1];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex bg-white">
       {/* Sidebar */}
       <aside className="w-64 shrink-0 bg-white text-zinc-900 border-r border-zinc-200 flex flex-col overflow-y-auto">
@@ -368,6 +369,7 @@ export default function CreateOrganizationWizard({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

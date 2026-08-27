@@ -31,15 +31,6 @@ function IconEvents() {
   );
 }
 
-function IconTeams() {
-  return (
-    <svg {...ICON_PROPS}>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
 function IconProfile() {
   return (
     <svg {...ICON_PROPS}>
@@ -68,9 +59,8 @@ export default function MobileBottomNav() {
   if (hasOwnMobileNav(pathname)) return null;
 
   const items = [
-    { href: "/tournaments" as const, label: t("tournaments"), icon: <IconTournaments /> },
+    ...(session ? [{ href: "/tournaments" as const, label: t("tournaments"), icon: <IconTournaments /> }] : []),
     { href: "/events" as const, label: t("discover"), icon: <IconEvents /> },
-    { href: "/teams" as const, label: t("teams"), icon: <IconTeams /> },
     session
       ? { href: "/dashboard/profile" as const, label: t("profile"), icon: <IconProfile /> }
       : { href: "/auth/signin" as const, label: t("login"), icon: <IconProfile /> },

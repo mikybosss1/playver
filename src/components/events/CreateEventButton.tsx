@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import CreateEventForm from "@/components/events/CreateEventForm";
@@ -12,7 +13,15 @@ import type { OrganizationSummary } from "@/app/actions/organization";
 
 type View = "closed" | "checking" | "noOrg" | "createEvent";
 
-export default function CreateEventButton({ label }: { label: string }) {
+export default function CreateEventButton({
+  label,
+  icon,
+  className,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  className?: string;
+}) {
   const [view, setView] = useState<View>("closed");
   const [toastKey, setToastKey] = useState(0);
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
@@ -56,12 +65,20 @@ export default function CreateEventButton({ label }: { label: string }) {
         type="button"
         onClick={handleClick}
         disabled={view === "checking"}
-        className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors shadow-sm disabled:opacity-60"
+        className={
+          className ??
+          "px-5 py-2.5 text-sm font-semibold text-white rounded-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors shadow-sm disabled:opacity-60"
+        }
       >
-        {view === "checking" ? "..." : label}
+        {view === "checking" ? "..." : (
+          <>
+            {icon}
+            {label}
+          </>
+        )}
       </button>
 
-      {view === "noOrg" && (
+      {view === "noOrg" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setView("closed")} />
           <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl text-center">
@@ -92,10 +109,11 @@ export default function CreateEventButton({ label }: { label: string }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {view === "createEvent" && (
+      {view === "createEvent" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setView("closed")} />
           <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-zinc-50 shadow-xl">
@@ -133,7 +151,8 @@ export default function CreateEventButton({ label }: { label: string }) {
               <CreateEventForm onSuccess={handleSuccess} onCancel={() => setView("closed")} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {toastKey > 0 && <SuccessToast key={toastKey} message={t("success")} />}

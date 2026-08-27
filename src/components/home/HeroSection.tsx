@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 
-export default function HeroSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+export default function HeroSection() {
   const t = useTranslations("Home");
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -21,40 +21,31 @@ export default function HeroSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   }, []);
 
   return (
-    <section className="relative min-h-[600px] flex items-center justify-center overflow-hidden py-20 bg-white">
-      <div className="absolute top-0 right-0 w-80 h-80 bg-red-100/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-red-50/40 rounded-full blur-3xl pointer-events-none" />
-
-      <div ref={containerRef} className="relative z-10 flex flex-col items-center text-center px-6 max-w-3xl mx-auto">
-        <span className="text-sm font-bold tracking-wide uppercase text-[#e21d12] mb-6">
-          {t("eyebrow")}
-        </span>
-
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-zinc-900 mb-6" style={{ fontFamily: "var(--font-playfair)" }}>
-          {t("title")}
-        </h1>
-
-        <p className="text-base sm:text-lg text-zinc-600 leading-relaxed max-w-xl mb-10">
-          {t("subtitle")}
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
-            href="/events"
-            className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold text-white rounded-lg shadow-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
+    <section className="bg-white py-20 sm:py-28">
+      <div ref={containerRef} className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1
+            className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.05] text-zinc-900 mb-6"
+            style={{ fontFamily: "var(--font-playfair)" }}
           >
-            {t("cta")}
-            <span aria-hidden>→</span>
-          </Link>
-          {isLoggedIn && (
+            {t("titleLine1")}
+            <br />
+            <span className="text-[#e21d12]">{t("titleLine2")}</span>
+          </h1>
+
+          <p className="text-base sm:text-lg text-zinc-600 leading-relaxed max-w-xl mx-auto mb-10">
+            {t("subtitle")}
+          </p>
+
+          <div className="flex justify-center">
             <Link
-              href="/dashboard/events"
+              href="/events"
               className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold text-white rounded-lg shadow-lg bg-[#e21d12] hover:bg-[#d41810] transition-colors"
             >
-              {t("createEvent")}
+              {t("cta")}
               <span aria-hidden>→</span>
             </Link>
-          )}
+          </div>
         </div>
       </div>
     </section>

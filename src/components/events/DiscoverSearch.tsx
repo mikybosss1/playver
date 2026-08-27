@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import EventCard from "@/components/events/EventCard";
+import EventListRow from "@/components/events/EventListRow";
 import type { EventItem } from "@/app/actions/event";
 
 type EventType = "all" | "league" | "tournament" | "pickup" | "activity";
 type Sport =
   | "all" | "soccer" | "basketball" | "volleyball" | "pickleball"
   | "tennis" | "hockey" | "baseball" | "cricket" | "rugby" | "other";
+type SortBy = "featured" | "date" | "popular";
+type ViewMode = "grid" | "list";
 
 const RECENT_KEY = "playver:recent-events";
 
@@ -39,6 +42,8 @@ export default function DiscoverSearch({
   const [upcomingOnly, setUpcomingOnly] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [page, setPage] = useState(0);
+  const [sortBy, setSortBy] = useState<SortBy>("featured");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   useEffect(() => {
     try {
@@ -51,14 +56,14 @@ export default function DiscoverSearch({
 
   useEffect(() => {
     setPage(0);
-  }, [search, activeType, sport, upcomingOnly]);
+  }, [search, activeType, sport, upcomingOnly, sortBy]);
 
-  const eventTypes: { key: EventType; label: string }[] = [
-    { key: "all", label: t("typeAll") },
-    { key: "league", label: t("typeLeague") },
-    { key: "tournament", label: t("typeTournament") },
-    { key: "pickup", label: t("typePickup") },
-    { key: "activity", label: t("typeActivity") },
+  const eventTypes: { key: EventType; label: string; emoji: string }[] = [
+    { key: "all", label: t("typeAll"), emoji: "🎟️" },
+    { key: "tournament", label: t("typeTournament"), emoji: "🏆" },
+    { key: "league", label: t("typeLeague"), emoji: "📋" },
+    { key: "pickup", label: t("typePickup"), emoji: "⚡" },
+    { key: "activity", label: t("typeActivity"), emoji: "🎯" },
   ];
 
   const sports: { key: Sport; label: string }[] = [
@@ -92,6 +97,17 @@ export default function DiscoverSearch({
     });
   }, [activeType, events, search, sport, upcomingOnly]);
 
+  const sortedEvents = useMemo(() => {
+    const list = [...filteredEvents];
+    if (sortBy === "date") {
+      list.sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+    } else if (sortBy === "popular") {
+      list.sort((a, b) => b.participantCount - a.participantCount);
+    }
+    // "featured" keeps the server's default order (upcoming-soonest-first)
+    return list;
+  }, [filteredEvents, sortBy]);
+
   const recentlyViewed = recentIds
     .map((id) => events.find((event) => event.id === id))
     .filter((event): event is EventItem => Boolean(event));
@@ -114,48 +130,68 @@ export default function DiscoverSearch({
       ? t("joinedProgress", { joined: event.participantCount, capacity: event.capacity })
       : t("joinedCount", { count: event.participantCount });
   };
-  const totalPages = Math.ceil(filteredEvents.length / PAGE_SIZE);
-  const visibleEvents = filteredEvents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(sortedEvents.length / PAGE_SIZE);
+  const visibleEvents = sortedEvents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="mt-10 flex flex-col gap-8">
-      <form onSubmit={(event) => event.preventDefault()} className="flex flex-col gap-6">
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="w-full pl-11 pr-4 py-3 text-sm bg-zinc-100 border border-zinc-200 rounded-xl outline-none focus:ring-2 focus:ring-red-200 placeholder:text-zinc-400 text-zinc-800"
-          />
+      <form onSubmit={(event) => event.preventDefault()} className="rounded-2xl border border-zinc-200 bg-white shadow-sm p-5 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="w-full pl-11 pr-4 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:ring-2 focus:ring-red-200 placeholder:text-zinc-400 text-zinc-800"
+            />
+          </div>
+
+          <div className="relative sm:w-48 shrink-0">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className="w-full appearance-none pl-4 pr-9 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-xl text-zinc-700 outline-none focus:ring-2 focus:ring-red-200 cursor-pointer hover:border-zinc-400 transition-colors"
+            >
+              <option value="featured">{t("sortFeatured")}</option>
+              <option value="date">{t("sortDate")}</option>
+              <option value="popular">{t("sortPopular")}</option>
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </div>
         </div>
 
         {!hideTypeFilter && (
           <div className="flex flex-wrap gap-2">
-            {eventTypes.map(({ key, label }) => (
+            {eventTypes.map(({ key, label, emoji }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setActiveType(key)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
                   activeType === key
                     ? "bg-[#e21d12] text-white border-[#e21d12]"
                     : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
                 }`}
               >
+                <span aria-hidden>{emoji}</span>
                 {label}
               </button>
             ))}
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-zinc-100">
           <div className="relative">
             <select
               value={sport}
@@ -184,6 +220,30 @@ export default function DiscoverSearch({
             </button>
             <span className="text-sm text-zinc-600 font-medium">{t("upcomingOnly")}</span>
           </label>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
+          <p className="text-sm text-zinc-500">{t("eventsFound", { count: sortedEvents.length })}</p>
+          <div className="flex items-center rounded-full border border-zinc-200 p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                viewMode === "grid" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              {t("gridView")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                viewMode === "list" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              {t("listView")}
+            </button>
+          </div>
         </div>
       </form>
 
@@ -247,10 +307,25 @@ export default function DiscoverSearch({
             <span className="text-5xl">🔍</span>
             <p className="text-zinc-500 text-base">{t("noEvents")}</p>
           </div>
-        ) : (
+        ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             {visibleEvents.map((event) => (
               <EventCard
+                key={event.id}
+                event={event}
+                freeLabel={t("free")}
+                endedLabel={t("eventEnded")}
+                joinedLabel={joinedLabel(event)}
+                organizerLabel={t("organizedBy")}
+                href={`/${linkTo}/${event.id}`}
+                onViewed={rememberEvent}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {visibleEvents.map((event) => (
+              <EventListRow
                 key={event.id}
                 event={event}
                 freeLabel={t("free")}
